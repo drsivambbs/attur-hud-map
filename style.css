@@ -402,6 +402,8 @@ details > summary::-webkit-details-marker { display: none; }
 .mp-label { font: 600 12px/1.3 var(--sans); color: var(--ink-3); margin: 10px 0 5px; }
 .mp-label:first-child { margin-top: 2px; }
 .seg-radios { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.pooled-seg { max-width: 240px; }
+.pooled-seg span { padding: 6px 4px; font-size: 12.5px; }
 .seg-radios label { flex: 1; cursor: pointer; }
 .seg-radios input { position: absolute; opacity: 0; pointer-events: none; }
 .seg-radios span { display: block; padding: 6px 4px; text-align: center; font-size: 12.5px; font-weight: 500; color: var(--ink-2); border-left: 1px solid var(--line); }

@@ -367,7 +367,7 @@
     const win = window.Analysis.windowText(st.cl.days), activeDays = window.Analysis.activeWindow(st.cl.days);
     const clusterMethod = `ST-DBSCAN · ${st.cl.eps} m · ${win} · at least ${st.cl.minPts} cases · ${st.cl.pooled ? 'Dengue and IP Fever together' : 'each disease separately'}`;
     const filterText = app.filterSummaryRows()
-      .filter((r) => ['Disease', 'Lab result / condition', 'Block', 'PHC', 'Area type', 'Sex', 'Age group'].includes(r.Setting) && r.Value !== 'All')
+      .filter((r) => ['Disease', 'Lab result / condition', 'Block', 'PHC', 'Area type', 'Sex', 'Age group'].includes(r.Setting) && r.Value !== 'All' && !/\(default\)$/.test(r.Value))
       .map((r) => `${r.Setting}: ${r.Value}`).join(' · ') || 'All cases (no filters)';
     const bounds = o.extent === 'view' ? app.map.getBounds() : app.areaBounds().pad(0.02);
     const area = app.areaLabel();

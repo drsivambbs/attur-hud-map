@@ -286,6 +286,12 @@
     return c.day;
   };
 
+  // By default only IP Fever and Dengue cases are shown: every Dengue result, and on the Fever sheet
+  // plain "Fever" plus NS1-positive dengue. Other infections (Leptospirosis, H1N1 ...) start unticked.
+  const isCoreCase = (c) => c.disease === 'Dengue' || c.condition === 'Fever' || c.condition === 'Dengue NS1 +ve';
+  const sameSet = (a, b) => a.size === b.size && [...a].every((v) => b.has(v));
+  const isDefaultFilter = (k) => (k === 'condition' ? sameSet(state.f.condition, state.f.def.condition) : state.f[k].size === state.f.all[k].size);
+
   function initFilters() {
     const cases = state.data.cases;
     const sets = {};
@@ -305,6 +311,9 @@
       inHud: $('optInHud').checked, noDup: $('optNoDup').checked, noFeverDengue: $('optNoFeverDengue').checked,
       phcSearch: ''
     };
+    const core = new Set(cases.filter(isCoreCase).map((c) => c.condition));
+    state.f.condition = new Set(core);
+    state.f.def = { condition: core };
     $('phcSearch').value = '';
     $('periodNote').textContent = `Data ${fmtShort(state.minDay)} – ${fmtDay(state.asOf)}`;
     buildFilterControls();
@@ -940,7 +949,8 @@
   }
   function filterSummaryRows() {
     const f = state.f;
-    const desc = (k) => (f[k].size === f.all[k].size ? 'All' : [...f[k]].join(', ') || 'None');
+    const desc = (k) => (k === 'condition' && isDefaultFilter(k) ? 'IP Fever and Dengue only (default)'
+      : f[k].size === f.all[k].size ? 'All' : [...f[k]].join(', ') || 'None');
     return [
       ['Period', `${fmtXl(f.from)} to ${fmtXl(f.to)}`], ['IP Fever dated by', BASIS_LABEL[f.basis]],
       ['Disease', desc('disease')], ['Lab result / condition', desc('condition')], ['Block', desc('block')], ['PHC', desc('phc')],
@@ -1285,7 +1295,7 @@
     const preset = document.querySelector('#datePresets button.on');
     const names = { 7: 'Last 7 days', 14: 'Last 14 days', 28: 'Last 28 days', month: 'This month', all: 'All dates' };
     const when = preset ? names[preset.dataset.preset] : 'Chosen dates';
-    const extra = Object.keys(f.all).filter((k) => k !== 'disease' && f[k].size !== f.all[k].size).length +
+    const extra = Object.keys(f.all).filter((k) => k !== 'disease' && !isDefaultFilter(k)).length +
       (f.inHud ? 0 : 1) + (f.noDup ? 0 : 1) + (f.noFeverDengue ? 1 : 0) + (f.basis !== 'report' ? 1 : 0);
     $('moreCount').textContent = extra ? `${extra} on` : '';
     $('scopeLine').innerHTML = `<b>${esc(disTxt)}</b> · <b>${esc(area)}</b> · <b>${when}</b> ` +

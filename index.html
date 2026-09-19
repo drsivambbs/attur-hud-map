@@ -124,6 +124,7 @@
           <div class="more-body">
             <div class="sub-head">Lab result</div>
             <div class="chips" id="fCondition"></div>
+            <p class="hint">Other infections (Leptospirosis, H1N1 …) are left out at the start. Tick them to include.</p>
 
             <div class="sub-head with-links">Block <span class="links"><button type="button" class="link" data-all="fBlock">Select all</button><button type="button" class="link" data-none="fBlock">Clear</button></span></div>
             <div class="checklist" id="fBlock"></div>
@@ -193,13 +194,12 @@
             <button type="button" data-eps="400" data-days="14" data-min="3">Standard</button>
             <button type="button" data-eps="1000" data-days="21" data-min="4">Broad</button>
           </div>
-          <details class="inline-more">
-            <summary>Dengue and IP Fever together or apart</summary>
-            <div class="radio-list">
-              <label class="check"><input type="radio" name="pooled" value="0" id="pooled0" checked> Separately (recommended)</label>
-              <label class="check"><input type="radio" name="pooled" value="1" id="pooled1"> Together, as one group of cases</label>
-            </div>
-          </details>
+          <div class="sub-head">Count Dengue and IP Fever</div>
+          <div class="seg-radios pooled-seg" role="radiogroup" aria-label="Count Dengue and IP Fever">
+            <label><input type="radio" name="pooled" value="0" id="pooled0" checked><span>Separately</span></label>
+            <label><input type="radio" name="pooled" value="1" id="pooled1"><span>Together</span></label>
+          </div>
+          <p class="hint">Together: cases of both diseases close by count as one group – for example 2 Dengue + 2 IP Fever within 400 m make a hotspot.</p>
         </div>
 
         <div class="step">

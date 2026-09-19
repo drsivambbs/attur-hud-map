@@ -8,7 +8,7 @@ A static web app that maps the IP Fever and Dengue line list for Attur Health Un
 
 ## Using it
 
-The screen is built for non-technical users: a plain sentence at the top says what is shown ("Showing Dengue and IP Fever in Valapadi block, the last 4 weeks"), five large numbers follow, and the Filter tab has three steps – **Where?** (one dropdown of blocks, or type a PHC / village), **When?** (This week, 2 weeks, 4 weeks, This month, Everything) and **Which disease?**. Everything else sits under **More filters**. **Home** (top left of the map) returns to the fresh view: whole HUD, all dates, both diseases, nothing selected (background map, dot size and Hide names are kept). With **Village borders** on, pointing at the map shows the village name, type, block and cases shown. Clusters are called **hotspots** on screen; the hotspot rule is one editable sentence. **Help** (top bar) explains each step and word.
+The screen is built for non-technical users: a plain sentence at the top says what is shown ("Showing Dengue and IP Fever in Valapadi block, the last 4 weeks"), five large numbers follow, and the Filter tab has three steps – **Where?** (one dropdown of blocks, or type a PHC / village), **When?** (This week, 2 weeks, 4 weeks, This month, Everything) and **Which disease?**. Everything else sits under **More filters**. By default only **IP Fever and Dengue** cases are selected: all Dengue results, and on the Fever sheet plain "Fever" plus NS1-positive dengue; other infections (Leptospirosis, H1N1, Parainfluenza …) start unticked under More filters → Lab result. **Home** (top left of the map) returns to the fresh view: whole HUD, all dates, both diseases, nothing selected (background map, dot size and Hide names are kept). With **Village borders** on, pointing at the map shows the village name, type, block and cases shown. Clusters are called **hotspots** on screen; the hotspot rule is one editable sentence. **Help** (top bar) explains each step and word.
 
 Details:
 
@@ -63,7 +63,7 @@ Comfortable up to about 50,000 cases (several years of HUD line lists); workable
 
 Two cases are neighbours when they are within **distance** metres of each other **and** within **days** of each other. A cluster forms where a case has at least **minimum cases** neighbours (counting itself); clusters grow through connected neighbourhoods, and isolated cases are left out.
 
-- Default: 400 m (about the flight range of *Aedes*), 14 days, 3 cases, each disease clustered separately.
+- Default: 400 m (about the flight range of *Aedes*), 14 days, 3 cases, each disease clustered separately. The **Separately / Together** switch on the Hotspots tab pools the two: with Together, e.g. 2 Dengue + 2 IP Fever cases within 400 m and 14 days of each other form one hotspot (ID prefix ALL-); with Separately they form none, since each disease has only 2.
 - **Active** = a case within the time window of the latest date shown; otherwise **Closed**. **New this week** = first case in the last 7 days.
 - **Stacked dots**: cases sharing one location (about 10 m) are drawn on top of each other; from zoom 12 the dot shows a count badge and its popup lists the other cases there. (In Aug–Sep 2026, 74 of 445 cases shared a spot with another case.) Block-dashboard maps in the PowerPoint show the same counts.
 - Cluster IDs (IPF-01, DEN-01 …) are numbered by first case date and change when the settings or filters change.
