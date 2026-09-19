@@ -127,6 +127,7 @@
   };
   let currentBase = basemaps.osm.addTo(map);
   L.control.scale({ metric: true, imperial: false, position: 'bottomright' }).addTo(map);
+  map.attributionControl.setPrefix('EpiTrack Attur · designed by Dr. M. Sivachandran Mathiyazagan · <a href="https://leafletjs.com">Leaflet</a>');
   [['mask', 395], ['villages', 400], ['blocks', 410], ['hud', 420], ['focus', 425], ['heat', 430], ['clusters', 440], ['cases', 450]]
     .forEach(([n, z]) => { map.createPane(n); map.getPane(n).style.zIndex = z; });
   map.getPane('villages').style.pointerEvents = 'none';
@@ -329,10 +330,24 @@
     const presets = { 7: state.asOf - 6, 14: state.asOf - 13, 28: state.asOf - 27, all: state.minDay };
     const a = dt(state.asOf);
     presets.month = Math.round(Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), 1) / DAY);
-    document.querySelectorAll('#datePresets button').forEach((b) => {
-      b.classList.toggle('on', f.to === state.asOf && f.from === presets[b.dataset.preset]);
-    });
+    const match = Object.keys(presets).find((k) => f.to === state.asOf && f.from === presets[k]);
+    const custom = state.customPeriod || !match;
+    $('periodSelect').value = custom ? 'custom' : match;
+    $('customDates').hidden = !custom;
   }
+
+  function syncDiseaseSelect() {
+    if (!state.f) return;
+    const on = ['Dengue', 'IP Fever'].filter((d) => state.f.disease.has(d));
+    $('diseaseSelect').value = on.length === 1 ? on[0] : 'both';
+  }
+  $('diseaseSelect').addEventListener('change', (e) => {
+    if (!state.f) return;
+    const v = e.target.value;
+    state.f.disease = new Set(v === 'both' ? [...state.f.all.disease] : [v]);
+    buildFilterControls();
+    update();
+  });
 
   function chipGroup(el, key, items) {
     const set = state.f[key];
@@ -363,6 +378,7 @@
     const byDis = countBy(cases, 'disease');
     chipGroup($('fDisease'), 'disease', ['Dengue', 'IP Fever'].filter((d) => byDis.has(d))
       .map((d) => ({ value: d, count: byDis.get(d), color: DISEASE_COLOR[d], soft: DISEASE_SOFT[d] })));
+    syncDiseaseSelect();
     const byCond = countBy(cases, 'condition');
     chipGroup($('fCondition'), 'condition', [...byCond.entries()].sort((a, b) => b[1] - a[1]).map(([v, n]) => ({ value: v, count: n })));
     const byArea = countBy(cases, 'areaType');
@@ -411,6 +427,17 @@
 
   $('dateFrom').addEventListener('change', (e) => { if (!state.f) return; const d = fromInput(e.target.value); if (d !== null) { state.f.from = d; setDateInputs(); update(); } });
   $('dateTo').addEventListener('change', (e) => { if (!state.f) return; const d = fromInput(e.target.value); if (d !== null) { state.f.to = d; setDateInputs(); update(); } });
+  $('periodSelect').addEventListener('change', (e) => {
+    if (!state.f) return;
+    const p = e.target.value;
+    if (p === 'custom') { state.customPeriod = true; setDateInputs(); $('dateFrom').focus(); return; }
+    state.customPeriod = false;
+    state.f.to = state.asOf;
+    if (p === 'all') state.f.from = state.minDay;
+    else if (p === 'month') { const a = dt(state.asOf); state.f.from = Math.round(Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), 1) / DAY); }
+    else state.f.from = state.asOf - (+p - 1);
+    setDateInputs(); update();
+  });
   document.querySelectorAll('#datePresets button').forEach((b) => b.addEventListener('click', () => {
     if (!state.f) return;
     const p = b.dataset.preset;
@@ -492,9 +519,8 @@
     const inCl = state.filtered.filter((c) => state.membership.has(c.uid)).length;
     const active = cl.filter((c) => c.status === 'Active').length;
     $('clusterStats').innerHTML = `
-      <div><dt>Hotspots</dt><dd>${cl.length}</dd></div>
-      <div class="act"><dt>Active now</dt><dd>${active}</dd></div>
-      <div><dt>Cases in hotspots</dt><dd>${inCl} <small>${mapped ? Math.round((inCl / mapped) * 100) : 0}%</small></dd></div>`;
+      <div><dt>hotspots</dt><dd>${cl.length}</dd></div>
+      <div><dt>cases in them (${mapped ? Math.round((inCl / mapped) * 100) : 0}% of cases shown)</dt><dd>${inCl}</dd></div>`;
     if (state.focus && !state.focus.areaKm2) { $('nni').textContent = ''; return; }
     const pts = state.focus ? state.filtered.filter((c) => c.lat !== null) : state.filtered.filter((c) => c.inHud);
     const nni = AN.nearestNeighbourIndex(pts, state.focus ? state.focus.areaKm2 : HUD_AREA_KM2);
@@ -754,7 +780,7 @@
    * ================================================================= */
   function renderKpis() {
     if (!state.data) {
-      $('kpis').innerHTML = [['Cases', ''], ['Dengue', 'den'], ['IP Fever', 'ipf'], ['This week', ''], ['Hotspots', 'act']]
+      $('kpis').innerHTML = [['cases', ''], ['Dengue', 'den'], ['IP Fever', 'ipf'], ['this week', ''], ['active hotspots', 'act']]
         .map(([k, c]) => `<div class="kpi ${c}"><dt>${k}</dt><dd>–</dd></div>`).join('');
       return;
     }
@@ -764,11 +790,11 @@
     const last7 = f.filter((c) => eday(c) > ref - 7).length;
     const act = state.clusters.filter((c) => c.status === 'Active').length;
     $('kpis').innerHTML = `
-      <div class="kpi" title="Cases shown on the map now"><dt>Cases</dt><dd>${fmtN(f.length)}</dd></div>
+      <div class="kpi" title="Cases shown on the map now"><dt>cases</dt><dd>${fmtN(f.length)}</dd></div>
       <div class="kpi den"><dt>Dengue</dt><dd>${fmtN(by.get('Dengue') || 0)}</dd></div>
       <div class="kpi ipf"><dt>IP Fever</dt><dd>${fmtN(by.get('IP Fever') || 0)}</dd></div>
-      <div class="kpi" title="${fmtShort(ref - 6)} to ${fmtShort(ref)}"><dt>This week</dt><dd>${fmtN(last7)}</dd></div>
-      <div class="kpi act" title="Hotspots with a case in the last ${AN.activeWindow(state.cl.days)} days"><dt>Hotspots</dt><dd>${act}</dd></div>`;
+      <div class="kpi" title="${fmtShort(ref - 6)} to ${fmtShort(ref)}"><dt>this week</dt><dd>${fmtN(last7)}</dd></div>
+      <div class="kpi act" title="Hotspots with a case in the last ${AN.activeWindow(state.cl.days)} days"><dt>active hotspots</dt><dd>${act}</dd></div>`;
   }
 
   const charts = {};
@@ -907,6 +933,7 @@
     const c = state.data.cases.find((x) => x.uid === uid);
     if (!c) return;
     if (c.lat === null) { toast('This record has no usable coordinates, so it cannot be shown on the map.'); return; }
+    showTab(null);
     userMoved = true;
     map.setView([c.lat, c.lon], Math.max(map.getZoom(), 15));
     const m = markerByUid.get(uid);
@@ -1043,14 +1070,35 @@
   /* =================================================================
    * Tabs, layers, privacy
    * ================================================================= */
+  // 'summary' opens the Charts drawer, 'quality' the Data check drawer; anything else closes both.
+  // The hotspot list is always in the sidebar.
   function showTab(name) {
-    ['filters', 'clusters', 'summary', 'quality'].forEach((t) => {
-      $('tab-' + t).setAttribute('aria-selected', String(t === name));
-      $('panel-' + t).hidden = t !== name;
-    });
+    $('panel-summary').hidden = name !== 'summary';
+    $('panel-quality').hidden = name !== 'quality';
+    $('chartsBtn').setAttribute('aria-pressed', String(name === 'summary'));
+    $('btnQuality').setAttribute('aria-pressed', String(name === 'quality'));
     if (name === 'summary') renderSummary();
   }
-  document.querySelectorAll('.tabs [role="tab"]').forEach((t) => t.addEventListener('click', () => showTab(t.id.replace('tab-', ''))));
+  $('chartsBtn').addEventListener('click', () => showTab($('panel-summary').hidden ? 'summary' : null));
+  $('btnQuality').addEventListener('click', () => showTab($('panel-quality').hidden ? 'quality' : null));
+  $('chartsClose').addEventListener('click', () => showTab(null));
+  $('qualityClose').addEventListener('click', () => showTab(null));
+
+  // More filters: a pop-up under its button.
+  const setMore = (open) => { $('moreFilters').hidden = !open; $('moreBtn').setAttribute('aria-expanded', String(open)); };
+  $('moreBtn').addEventListener('click', (e) => { e.stopPropagation(); setMore($('moreFilters').hidden); });
+  $('moreDone').addEventListener('click', () => setMore(false));
+  $('moreFilters').addEventListener('click', (e) => e.stopPropagation());
+  document.addEventListener('click', () => setMore(false));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { setMore(false); showTab(null); } });
+
+  // The hotspot rule sits behind a small "Rule" link.
+  const setRule = (open) => {
+    $('ruleBox').hidden = !open;
+    $('ruleToggle').setAttribute('aria-expanded', String(open));
+    $('ruleToggle').textContent = open ? 'Hide rule' : 'Rule';
+  };
+  $('ruleToggle').addEventListener('click', () => setRule($('ruleBox').hidden));
 
   $('layerToggle').addEventListener('click', () => {
     const body = $('layerBody');
@@ -1187,6 +1235,7 @@
       String((!!f && f.type === 'block' && f.value === b.dataset.v) || (!f && b.dataset.v === ''))));
     if (!f) { $('focusNote').textContent = ''; return; }
     $('focusChipText').textContent = f.label;
+    $('focusChip').title = `${f.label}: ${f.type === 'village' ? 'cases whose location is inside this place' : f.type === 'block' ? 'cases with this block in the line list' : 'cases with this PHC in the line list'}`;
     if (f.feature) {
       // Fade everything outside the area with a world-sized polygon that has the area cut out.
       const polys = f.feature.geometry.type === 'Polygon' ? [f.feature.geometry.coordinates] : f.feature.geometry.coordinates;
@@ -1292,9 +1341,9 @@
     const dis = ['Dengue', 'IP Fever'].filter((d) => f.disease.has(d));
     const disTxt = dis.length === 2 ? 'Dengue and IP Fever' : dis.length ? dis[0] : 'No disease chosen';
     const area = state.focus ? state.focus.label : 'Whole HUD';
-    const preset = document.querySelector('#datePresets button.on');
     const names = { 7: 'Last 7 days', 14: 'Last 14 days', 28: 'Last 28 days', month: 'This month', all: 'All dates' };
-    const when = preset ? names[preset.dataset.preset] : 'Chosen dates';
+    const when = names[$('periodSelect').value] || 'Chosen dates';
+    $('periodNote').textContent = `${fmtDay(f.from)} – ${fmtDay(f.to)}`;
     const extra = Object.keys(f.all).filter((k) => k !== 'disease' && !isDefaultFilter(k)).length +
       (f.inHud ? 0 : 1) + (f.noDup ? 0 : 1) + (f.noFeverDengue ? 1 : 0) + (f.basis !== 'report' ? 1 : 0);
     $('moreCount').textContent = extra ? `${extra} on` : '';
@@ -1341,11 +1390,13 @@
     $('optInHud').checked = true; $('optNoDup').checked = true; $('optNoFeverDengue').checked = false;
     $('dateBasis').value = 'report';
     $('focusSearch').value = ''; $('focusResults').hidden = true;
-    $('moreFilters').open = false;
+    setMore(false);
+    setRule(false);
+    state.customPeriod = false;
     document.querySelectorAll('.inline-more').forEach((d) => { d.open = false; });
     state.focus = null;
     state.qaType = null;
-    showTab('filters');
+    showTab(null);
     document.querySelectorAll('.panel').forEach((p) => { p.scrollTop = 0; });
 
     if (state.data) {

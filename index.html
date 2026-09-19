@@ -52,6 +52,7 @@
             <button role="menuitem" type="button" data-export="template"><b>Blank template (Excel)</b><span>The standard sheet for entering new cases</span></button>
           </div>
         </div>
+        <button class="btn btn-quiet" id="btnQuality" type="button" aria-pressed="false" title="Rows to correct in the line list"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Data check</span><span class="badge warn" id="qaBadge"></span></button>
         <button class="btn btn-quiet" id="btnHelp" type="button" aria-label="Help">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M9.6 9.3a2.5 2.5 0 014.8.9c0 1.7-2.4 2.1-2.4 3.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="17" r="1.1" fill="currentColor"/></svg>
           <span>Help</span>
@@ -65,63 +66,43 @@
       <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm,.csv" multiple hidden>
     </header>
 
-    <!-- ================= Sidebar ================= -->
-    <aside class="sidebar" id="sidebar">
-      <div class="scope" id="scopeLine" aria-live="polite">Load a line-list file to begin.</div>
-      <dl class="kpis" id="kpis"></dl>
-
-      <nav class="tabs" role="tablist" aria-label="Sections">
-        <button role="tab" id="tab-filters" aria-controls="panel-filters" aria-selected="true" type="button">
-          <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Filter</button>
-        <button role="tab" id="tab-clusters" aria-controls="panel-clusters" aria-selected="false" type="button">
-          <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2.4"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/></svg>Hotspots <span class="badge" id="clusterBadge"></span></button>
-        <button role="tab" id="tab-summary" aria-controls="panel-summary" aria-selected="false" type="button">
-          <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>Charts</button>
-        <button role="tab" id="tab-quality" aria-controls="panel-quality" aria-selected="false" type="button">
-          <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Data check <span class="badge warn" id="qaBadge"></span></button>
-      </nav>
-
-      <!-- ---------- Filter ---------- -->
-      <section class="panel" role="tabpanel" id="panel-filters" aria-labelledby="tab-filters">
-        <div class="step">
-          <div class="step-head"><span class="step-no">1</span><h2>Where?</h2><button type="button" class="link" id="focusClear" hidden>Whole HUD</button></div>
-          <label class="sr-only" for="focusSelect">Area</label>
-          <select id="focusSelect" class="big-select"><option value="">Whole Attur HUD</option></select>
-          <div class="search">
-            <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            <input type="search" id="focusSearch" placeholder="Or type a PHC, village or town" autocomplete="off" aria-label="Find a PHC, village or town">
-            <ul class="results" id="focusResults" hidden></ul>
-          </div>
-          <div id="focusBlocks" hidden></div>
-          <p class="hint" id="focusNote"></p>
+    <!-- ================= Filter bar ================= -->
+    <section class="filterbar" aria-label="Filters">
+      <div class="fb-row">
+        <label class="fb-field"><span class="fb-lbl">Area</span>
+          <select id="focusSelect" class="fb-select fb-area"><option value="">Whole Attur HUD</option></select>
+        </label>
+        <button type="button" class="fb-clear" id="focusClear" hidden title="Back to whole HUD" aria-label="Back to whole HUD"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+        <div class="search fb-search">
+          <svg class="search-icon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <input type="search" id="focusSearch" placeholder="Find a PHC or village" autocomplete="off" aria-label="Find a PHC, village or town">
+          <ul class="results" id="focusResults" hidden></ul>
         </div>
-
-        <div class="step">
-          <div class="step-head"><span class="step-no">2</span><h2>When?</h2><span class="hint-inline" id="periodNote"></span></div>
-          <div class="seg-buttons" id="datePresets">
-            <button type="button" data-preset="7" title="Last 7 days">7 days</button>
-            <button type="button" data-preset="14" title="Last 14 days">14 days</button>
-            <button type="button" data-preset="28" title="Last 28 days">28 days</button>
-            <button type="button" data-preset="month" title="This calendar month">Month</button>
-            <button type="button" data-preset="all" title="All dates in the file">All</button>
-          </div>
-          <details class="inline-more">
-            <summary>Choose exact dates</summary>
-            <div class="row2">
-              <label class="field"><span>From</span><input type="date" id="dateFrom"></label>
-              <label class="field"><span>To</span><input type="date" id="dateTo"></label>
-            </div>
-          </details>
+        <span class="fb-sep" aria-hidden="true"></span>
+        <label class="fb-field"><span class="fb-lbl">Period</span>
+          <select id="periodSelect" class="fb-select">
+            <option value="7">Last 7 days</option>
+            <option value="14">Last 14 days</option>
+            <option value="28">Last 28 days</option>
+            <option value="month">This month</option>
+            <option value="all">All dates</option>
+            <option value="custom">Choose dates…</option>
+          </select>
+        </label>
+        <div class="fb-dates" id="customDates" hidden>
+          <input type="date" id="dateFrom" aria-label="From date"><span>to</span><input type="date" id="dateTo" aria-label="To date">
         </div>
-
-        <div class="step">
-          <div class="step-head"><span class="step-no">3</span><h2>Which disease?</h2></div>
-          <div class="disease-toggles" id="fDisease"></div>
-        </div>
-
-        <details class="more-filters" id="moreFilters">
-          <summary><span>More filters</span><span class="badge" id="moreCount"></span></summary>
-          <div class="more-body">
+        <span class="fb-sep" aria-hidden="true"></span>
+        <label class="fb-field"><span class="fb-lbl">Disease</span>
+          <select id="diseaseSelect" class="fb-select">
+            <option value="both">Dengue and IP Fever</option>
+            <option value="Dengue">Dengue only</option>
+            <option value="IP Fever">IP Fever only</option>
+          </select>
+        </label>
+        <div class="menu-wrap">
+          <button type="button" class="fb-btn" id="moreBtn" aria-expanded="false" aria-controls="moreFilters"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>More filters<span class="badge" id="moreCount"></span></button>
+          <div class="popover" id="moreFilters" hidden role="dialog" aria-label="More filters">
             <div class="sub-head">Lab result</div>
             <div class="chips" id="fCondition"></div>
             <p class="hint">Other infections (Leptospirosis, H1N1 …) are left out at the start. Tick them to include.</p>
@@ -153,20 +134,35 @@
             <label class="check"><input type="checkbox" id="optInHud" checked> Only cases inside Attur HUD</label>
             <label class="check"><input type="checkbox" id="optNoDup" checked> Leave out repeated entries</label>
             <label class="check"><input type="checkbox" id="optNoFeverDengue"> Leave out fever cases later confirmed as dengue</label>
+            <div class="pop-foot">
+              <button type="button" class="btn btn-quiet" id="resetFilters">Reset all filters</button>
+              <button type="button" class="btn btn-primary" id="moreDone">Done</button>
+            </div>
           </div>
-        </details>
-
-        <div class="panel-foot">
-          <button type="button" class="btn btn-block" id="resetFilters">
-            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Start again (clear all filters)
-          </button>
         </div>
-      </section>
+        <div class="fb-end">
+          <button type="button" class="fb-btn" id="chartsBtn" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>Charts</button>
+          <button type="button" class="home-btn" id="homeBtn" title="Back to the start: whole HUD, all dates, no selection"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M3.5 11.2L12 4l8.5 7.2M6 9.6V20h4.5v-5.5h3V20H18V9.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Home</button>
+        </div>
+      </div>
+      <div class="statline">
+        <dl class="kpis" id="kpis"></dl>
+        <span class="fb-note" id="periodNote"></span>
+      </div>
+      <div id="fDisease" hidden></div>
+      <div id="focusBlocks" hidden></div>
+      <p class="sr-only" id="focusNote" aria-live="polite"></p>
+      <p class="sr-only" id="scopeLine" aria-live="polite"></p>
+    </section>
 
-      <!-- ---------- Hotspots ---------- -->
-      <section class="panel" role="tabpanel" id="panel-clusters" aria-labelledby="tab-clusters" hidden>
-        <div class="step">
+    <!-- ================= Sidebar: hotspots ================= -->
+    <aside class="sidebar" id="sidebar">
+      <div class="hot-head">
+        <h2>Hotspots</h2>
+        <span class="hot-active"><span id="clusterBadge"></span> active</span>
+        <button type="button" class="link" id="ruleToggle" aria-expanded="false" aria-controls="ruleBox">Rule</button>
+      </div>
+      <div class="rule-box" id="ruleBox" hidden>
           <p class="rule">
             A <b>hotspot</b> is
             <label class="sr-only" for="minPts">minimum cases</label>
@@ -200,12 +196,12 @@
             <label><input type="radio" name="pooled" value="1" id="pooled1"><span>Together</span></label>
           </div>
           <p class="hint">Together: cases of both diseases close by count as one group – for example 2 Dengue + 2 IP Fever within 400 m make a hotspot.</p>
-        </div>
-
-        <div class="step">
-          <dl class="cluster-stats" id="clusterStats"></dl>
-          <p class="nni" id="nni"></p>
-          <div class="list-tools">
+      </div>
+      <div class="hot-summary">
+        <dl class="cluster-stats" id="clusterStats"></dl>
+        <p class="nni" id="nni"></p>
+      </div>
+      <div class="list-tools">
             <div class="seg-buttons small" id="clusterStatusFilter">
               <button type="button" data-status="all" aria-pressed="true">All</button>
               <button type="button" data-status="Active" aria-pressed="false">Active</button>
@@ -218,54 +214,9 @@
               <option value="first">Oldest first</option>
             </select>
           </div>
-          <ul class="cluster-list" id="clusterList"></ul>
-        </div>
+      <section class="panel" id="panel-clusters" aria-label="Hotspot list">
+        <ul class="cluster-list" id="clusterList"></ul>
       </section>
-
-      <!-- ---------- Charts ---------- -->
-      <section class="panel" role="tabpanel" id="panel-summary" aria-labelledby="tab-summary" hidden>
-        <div class="step">
-          <div class="step-head"><h2>Cases each week</h2><span class="hint-inline">Monday to Sunday</span></div>
-          <div class="chart-box"><canvas id="epiChart" aria-label="Cases each week"></canvas></div>
-        </div>
-        <div class="step">
-          <div class="step-head"><h2>By block</h2></div>
-          <div class="table-wrap"><table class="tbl" id="blockTable"></table></div>
-        </div>
-        <div class="step">
-          <div class="step-head"><h2>Age and sex</h2></div>
-          <div class="chart-box short"><canvas id="ageChart" aria-label="Cases by age group and sex"></canvas></div>
-        </div>
-        <div class="step">
-          <div class="step-head"><h2>Places with most cases</h2></div>
-          <div class="table-wrap"><table class="tbl" id="placeTable"></table></div>
-        </div>
-        <div class="step">
-          <div class="step-head"><h2>Lab results</h2></div>
-          <div class="table-wrap"><table class="tbl" id="condTable"></table></div>
-        </div>
-      </section>
-
-      <!-- ---------- Data check ---------- -->
-      <section class="panel" role="tabpanel" id="panel-quality" aria-labelledby="tab-quality" hidden>
-        <div class="step">
-          <div class="step-head"><h2>Your data file</h2></div>
-          <ul class="files" id="fileList"></ul>
-          <div class="row-actions">
-            <button type="button" class="btn" id="btnAddFile">Add another file</button>
-            <button type="button" class="btn btn-quiet" id="btnForget">Remove data from this computer</button>
-          </div>
-          <label class="check"><input type="checkbox" id="optRemember" checked> Keep the data here for next time</label>
-          <p class="hint">The file is read on this computer only. Nothing is uploaded.</p>
-        </div>
-        <div class="step">
-          <div class="step-head"><h2>Things to correct</h2></div>
-          <p class="hint">Tap a line to see the rows, then tap a row to find it on the map.</p>
-          <div class="qa-summary" id="qaSummary"></div>
-          <ul class="qa-list" id="qaList"></ul>
-        </div>
-      </section>
-      <footer class="credit">Designed by <b>Dr. M. Sivachandran Mathiyazagan</b>, <span class="nw">MBBS, MPH (ICMR-NIE)</span></footer>
     </aside>
 
     <!-- ================= Map ================= -->
@@ -273,10 +224,6 @@
       <div id="map" aria-label="Case map"></div>
 
       <div class="map-top">
-        <button type="button" class="home-btn" id="homeBtn" title="Back to the start: whole HUD, all dates, no selection">
-          <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M3.5 11.2L12 4l8.5 7.2M6 9.6V20h4.5v-5.5h3V20H18V9.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Home
-        </button>
         <button type="button" class="fit-btn" id="fitBtn" title="Zoom to the selected area">Full HUD</button>
         <div class="focus-chip" id="focusChip" hidden>
           <span id="focusChipText"></span>
@@ -326,6 +273,57 @@
 
       <div class="legend-box" id="legendBox"></div>
 
+      <section class="drawer" id="panel-summary" hidden aria-label="Charts">
+        <div class="drawer-head"><h2>Charts</h2><span class="hint-inline">for the area, period and disease chosen above</span>
+          <button type="button" class="icon-close" id="chartsClose" aria-label="Close charts"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></div>
+        <div class="drawer-body">
+        <div class="step">
+          <div class="step-head"><h2>Cases each week</h2><span class="hint-inline">Monday to Sunday</span></div>
+          <div class="chart-box"><canvas id="epiChart" aria-label="Cases each week"></canvas></div>
+        </div>
+        <div class="step">
+          <div class="step-head"><h2>By block</h2></div>
+          <div class="table-wrap"><table class="tbl" id="blockTable"></table></div>
+        </div>
+        <div class="step">
+          <div class="step-head"><h2>Age and sex</h2></div>
+          <div class="chart-box short"><canvas id="ageChart" aria-label="Cases by age group and sex"></canvas></div>
+        </div>
+        <div class="step">
+          <div class="step-head"><h2>Places with most cases</h2></div>
+          <div class="table-wrap"><table class="tbl" id="placeTable"></table></div>
+        </div>
+        <div class="step">
+          <div class="step-head"><h2>Lab results</h2></div>
+          <div class="table-wrap"><table class="tbl" id="condTable"></table></div>
+        </div>
+        </div>
+      </section>
+
+      <section class="drawer" id="panel-quality" hidden aria-label="Data check">
+        <div class="drawer-head"><h2>Data check</h2><span class="hint-inline">rows to correct in the line list</span>
+          <button type="button" class="icon-close" id="qualityClose" aria-label="Close data check"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></div>
+        <div class="drawer-body">
+        <div class="step">
+          <div class="step-head"><h2>Your data file</h2></div>
+          <ul class="files" id="fileList"></ul>
+          <div class="row-actions">
+            <button type="button" class="btn" id="btnAddFile">Add another file</button>
+            <button type="button" class="btn btn-quiet" id="btnForget">Remove data from this computer</button>
+          </div>
+          <label class="check"><input type="checkbox" id="optRemember" checked> Keep the data here for next time</label>
+          <p class="hint">The file is read on this computer only. Nothing is uploaded.</p>
+        </div>
+        <div class="step">
+          <div class="step-head"><h2>Things to correct</h2></div>
+          <p class="hint">Tap a line to see the rows, then tap a row to find it on the map.</p>
+          <div class="qa-summary" id="qaSummary"></div>
+          <ul class="qa-list" id="qaList"></ul>
+        </div>
+        </div>
+      </section>
+
+
       <div class="empty" id="emptyState">
         <div class="empty-card">
           <h2>Welcome to EpiTrack Attur</h2>
@@ -356,21 +354,21 @@
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></div>
       <ol class="steps">
         <li><span>1</span><div><b>Load new data</b> – choose the latest line-list Excel. It is remembered on this computer for next time.</div></li>
-        <li><span>2</span><div><b>Filter</b> – pick the area (a block, PHC or village), the period and the disease. The numbers and the map change at once.</div></li>
-        <li><span>3</span><div><b>Hotspots</b> – see where cases are grouping. Tap a hotspot to zoom to it and see its cases.</div></li>
+        <li><span>2</span><div><b>Choose</b> the Area, Period and Disease in the bar above the map (or type a PHC or village). Everything else is under <b>More filters</b>. The numbers and the map change at once.</div></li>
+        <li><span>3</span><div><b>Hotspots</b> are listed on the left. Tap one to zoom to it and see its cases. <b>Charts</b> opens the weekly trend and tables.</div></li>
         <li><span>4</span><div><b>Download</b> – get a ready PowerPoint, or the case and hotspot lists in Excel.</div></li>
       </ol>
       <h3>Words used</h3>
       <dl class="glossary">
-        <dt>Home</dt><dd>The button at the top left of the map. It clears every choice and shows the whole HUD again, as when the map was first opened.</dd>
+        <dt>Home</dt><dd>The button at the right end of the filter bar. It clears every choice and shows the whole HUD again, as when the map was first opened.</dd>
         <dt>Village names</dt><dd>Turn on "Village borders" in Map options, then point at the map to see each village's name, block and cases.</dd>
-        <dt>Hotspot</dt><dd>A group of cases close together in place and time. The rule is shown at the top of the Hotspots tab and can be changed.</dd>
+        <dt>Hotspot</dt><dd>A group of cases close together in place and time. Click "Rule" above the hotspot list to see or change it.</dd>
         <dt>Stacked dots</dt><dd>When several cases share the same location, the dot shows a number when zoomed in, and clicking it lists all of them.</dd>
-        <dt>Dengue + IP Fever</dt><dd>Hotspots count each disease separately. To see places where both diseases occur together, choose "Together" on the Hotspots tab.</dd>
+        <dt>Dengue + IP Fever</dt><dd>Hotspots count each disease separately. To see places where both diseases occur together, choose "Together" under Rule, above the hotspot list.</dd>
         <dt>Active hotspot</dt><dd>A hotspot with a case in the last 14 days (or the number of days chosen). "Over" means no recent case.</dd>
         <dt>New this week</dt><dd>Cases in the 7 days up to the latest date in the file.</dd>
         <dt>IP Fever</dt><dd>In-patient fever cases (Fever sheet). Dengue = lab-confirmed dengue (DENGUE sheet).</dd>
-        <dt>Data check</dt><dd>Rows with missing or doubtful details, such as no location or a date that does not add up.</dd>
+        <dt>Data check</dt><dd>The button in the top bar (with a red count): rows with missing or doubtful details, such as no location or a date that does not add up.</dd>
         <dt>Hide names</dt><dd>Removes names, phone numbers and addresses from the screen and from downloads, for meetings.</dd>
       </dl>
       <p class="credit-inline">EpiTrack Attur · Designed by <b>Dr. M. Sivachandran Mathiyazagan</b>, <span class="nw">MBBS, MPH (ICMR-NIE)</span></p>
