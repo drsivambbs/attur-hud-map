@@ -353,7 +353,7 @@
     const cases = state.data.cases;
     const byDis = countBy(cases, 'disease');
     chipGroup($('fDisease'), 'disease', ['Dengue', 'IP Fever'].filter((d) => byDis.has(d))
-      .map((d) => ({ value: d, count: byDis.get(d), color: DISEASE_COLOR[d], soft: DISEASE_SOFT[d], unit: 'cases in file' })));
+      .map((d) => ({ value: d, count: byDis.get(d), color: DISEASE_COLOR[d], soft: DISEASE_SOFT[d] })));
     const byCond = countBy(cases, 'condition');
     chipGroup($('fCondition'), 'condition', [...byCond.entries()].sort((a, b) => b[1] - a[1]).map(([v, n]) => ({ value: v, count: n })));
     const byArea = countBy(cases, 'areaType');
@@ -745,7 +745,7 @@
    * ================================================================= */
   function renderKpis() {
     if (!state.data) {
-      $('kpis').innerHTML = [['Total cases', ''], ['Dengue', 'den'], ['IP Fever', 'ipf'], ['New this week', ''], ['Active hotspots', 'act']]
+      $('kpis').innerHTML = [['Cases', ''], ['Dengue', 'den'], ['IP Fever', 'ipf'], ['This week', ''], ['Hotspots', 'act']]
         .map(([k, c]) => `<div class="kpi ${c}"><dt>${k}</dt><dd>–</dd></div>`).join('');
       return;
     }
@@ -755,11 +755,11 @@
     const last7 = f.filter((c) => eday(c) > ref - 7).length;
     const act = state.clusters.filter((c) => c.status === 'Active').length;
     $('kpis').innerHTML = `
-      <div class="kpi" title="Cases shown on the map now"><dt>Total cases</dt><dd>${fmtN(f.length)}</dd></div>
+      <div class="kpi" title="Cases shown on the map now"><dt>Cases</dt><dd>${fmtN(f.length)}</dd></div>
       <div class="kpi den"><dt>Dengue</dt><dd>${fmtN(by.get('Dengue') || 0)}</dd></div>
       <div class="kpi ipf"><dt>IP Fever</dt><dd>${fmtN(by.get('IP Fever') || 0)}</dd></div>
-      <div class="kpi" title="${fmtShort(ref - 6)} to ${fmtShort(ref)}"><dt>New this week</dt><dd>${fmtN(last7)}</dd></div>
-      <div class="kpi act" title="Hotspots with a case in the last ${AN.activeWindow(state.cl.days)} days"><dt>Active hotspots</dt><dd>${act}</dd></div>`;
+      <div class="kpi" title="${fmtShort(ref - 6)} to ${fmtShort(ref)}"><dt>This week</dt><dd>${fmtN(last7)}</dd></div>
+      <div class="kpi act" title="Hotspots with a case in the last ${AN.activeWindow(state.cl.days)} days"><dt>Hotspots</dt><dd>${act}</dd></div>`;
   }
 
   const charts = {};
@@ -1280,16 +1280,16 @@
     if (!state.data) return;
     const f = state.f;
     const dis = ['Dengue', 'IP Fever'].filter((d) => f.disease.has(d));
-    const disTxt = dis.length === 2 ? 'Dengue and IP Fever' : dis.length ? dis[0] : 'no disease (choose one in step 3)';
-    const area = state.focus ? state.focus.label : 'the whole of Attur HUD';
+    const disTxt = dis.length === 2 ? 'Dengue and IP Fever' : dis.length ? dis[0] : 'No disease chosen';
+    const area = state.focus ? state.focus.label : 'Whole HUD';
     const preset = document.querySelector('#datePresets button.on');
-    const names = { 7: 'this week', 14: 'the last 2 weeks', 28: 'the last 4 weeks', month: 'this month', all: 'all dates in the file' };
-    const when = preset ? names[preset.dataset.preset] : 'the chosen dates';
+    const names = { 7: 'Last 7 days', 14: 'Last 14 days', 28: 'Last 28 days', month: 'This month', all: 'All dates' };
+    const when = preset ? names[preset.dataset.preset] : 'Chosen dates';
     const extra = Object.keys(f.all).filter((k) => k !== 'disease' && f[k].size !== f.all[k].size).length +
       (f.inHud ? 0 : 1) + (f.noDup ? 0 : 1) + (f.noFeverDengue ? 1 : 0) + (f.basis !== 'report' ? 1 : 0);
     $('moreCount').textContent = extra ? `${extra} on` : '';
-    $('scopeLine').innerHTML = `Showing <b>${esc(disTxt)}</b> in <b>${esc(area)}</b>, <b>${when}</b> ` +
-      `<span class="muted">(${fmtShort(f.from)} – ${fmtDay(f.to)})${extra ? ` · ${extra} more filter${extra === 1 ? '' : 's'} on` : ''}</span>`;
+    $('scopeLine').innerHTML = `<b>${esc(disTxt)}</b> · <b>${esc(area)}</b> · <b>${when}</b> ` +
+      `<span class="muted">${fmtShort(f.from)} – ${fmtDay(f.to)}${extra ? ` · ${extra} more filter${extra === 1 ? '' : 's'}` : ''}</span>`;
   }
 
   function update() {
@@ -1373,6 +1373,7 @@
   /* ---------- Start ---------- */
   const savedCl = store.get('cluster', null);
   if (savedCl) Object.assign(state.cl, savedCl);
+  if (![...$('days').options].some((o) => +o.value === state.cl.days)) state.cl.days = 14;   // e.g. the removed "at any time"
   $(state.cl.pooled ? 'pooled1' : 'pooled0').checked = true;
   syncClusterControls();
   renderKpis();
