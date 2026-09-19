@@ -66,14 +66,19 @@
     const hud = hudData.hud.features[0].geometry;
     const hudVerts = [];
     polys(hud).forEach((p) => p[0].forEach((v) => hudVerts.push(v)));
+    const locateFeature = (lon, lat) => {
+      for (const v of villages) {
+        const [a, b, c, d] = v.bb;
+        if (lon < a || lon > c || lat < b || lat > d) continue;
+        if (inGeom(lon, lat, v.f.geometry)) return v.f;
+      }
+      return null;
+    };
     return {
+      locateFeature,
       locate(lon, lat) {
-        for (const v of villages) {
-          const [a, b, c, d] = v.bb;
-          if (lon < a || lon > c || lat < b || lat > d) continue;
-          if (inGeom(lon, lat, v.f.geometry)) return v.f.properties;
-        }
-        return null;
+        const f = locateFeature(lon, lat);
+        return f ? f.properties : null;
       },
       kmOutside(lon, lat) {
         let best = Infinity;

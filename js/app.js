@@ -1017,6 +1017,34 @@
   layerToggle('lyrHud', hudLayer);
   layerToggle('lyrBlocks', blockLayer);
   layerToggle('lyrVillages', villageLayer);
+
+  // Village name on hover. The case points are drawn on a canvas above the village borders, which
+  // would swallow ordinary hover events, so the village under the cursor is looked up instead.
+  const villageHover = L.layerGroup().addTo(map);
+  const villageTip = L.tooltip({ direction: 'right', offset: [16, 0], className: 'village-tip', interactive: false });
+  let hoverFeature = null, hoverFrame = 0, lastMove = null;
+  const clearVillageHover = () => { hoverFeature = null; villageHover.clearLayers(); map.closeTooltip(villageTip); };
+  function showVillageHover() {
+    hoverFrame = 0;
+    if (!lastMove || !$('lyrVillages').checked) { clearVillageHover(); return; }
+    const { lat, lng } = lastMove;
+    const f = geo.locateFeature(lng, lat);
+    if (!f) { clearVillageHover(); return; }
+    if (f !== hoverFeature) {
+      hoverFeature = f;
+      villageHover.clearLayers();
+      L.geoJSON(f, { pane: 'focus', interactive: false, style: { color: '#0e6e5f', weight: 3, fill: true, fillColor: '#0e6e5f', fillOpacity: 0.06 } }).addTo(villageHover);
+      const p = f.properties;
+      const n = state.data ? state.filtered.filter((c) => String(c.villageLgd) === String(p.village_lgd)).length : null;
+      const kind = p.unit_type === 'Revenue Village' ? 'Village' : p.unit_type;
+      villageTip.setContent(`<b>${esc(p.village_name)}</b><br><span>${esc(kind)} · ${esc(LINE_LIST_NAME[p.health_block] || p.health_block)} block${n === null ? '' : ` · ${n} case${n === 1 ? '' : 's'} shown`}</span>`);
+    }
+    villageTip.setLatLng(lastMove);
+    if (!map.hasLayer(villageTip)) villageTip.addTo(map);
+  }
+  map.on('mousemove', (e) => { lastMove = e.latlng; if (!hoverFrame) hoverFrame = setTimeout(showVillageHover, 30); });
+  map.on('mouseout', () => { lastMove = null; clearVillageHover(); });
+  $('lyrVillages').addEventListener('change', (e) => { if (!e.target.checked) clearVillageHover(); });
   layerToggle('lyrLabels', labelLayer);
   $('lyrCases').addEventListener('change', () => { renderCases(); renderLegend(); });
   $('optOnlyClustered').addEventListener('change', () => { if (state.data) { renderCases(); renderLegend(); } });
@@ -1246,6 +1274,45 @@
     drawFocus();
     renderScope();
   }
+
+  /* ---------- Home: back to how the app looks when first opened ---------- */
+  // Resets the view (area, filters, period, selection, hotspot rule, map layers and position).
+  // Saved preferences are kept: background map, dot size and "Hide names".
+  function goHome() {
+    map.closePopup();
+    const setBox = (id, on) => { const el = $(id); if (el.checked !== on) { el.checked = on; el.dispatchEvent(new Event('change')); } };
+    [['lyrCases', true], ['lyrClusters', true], ['lyrHeat', false], ['optOnlyClustered', false], ['lyrHud', true],
+      ['lyrBlocks', true], ['lyrVillages', false], ['lyrLabels', true]].forEach(([id, on]) => setBox(id, on));
+    $('cbDisease').checked = true; state.colorBy = 'disease';
+    $('layerBody').hidden = true; $('layerToggle').setAttribute('aria-expanded', 'false');
+
+    Object.assign(state.cl, { eps: 400, days: 14, minPts: 3, pooled: false, status: 'all', sort: 'recent', selected: null });
+    $('pooled0').checked = true;
+    $('clusterSort').value = 'recent';
+    document.querySelectorAll('#clusterStatusFilter button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.status === 'all')));
+    syncClusterControls();
+    store.set('cluster', { eps: 400, days: 14, minPts: 3, pooled: false });
+
+    $('optInHud').checked = true; $('optNoDup').checked = true; $('optNoFeverDengue').checked = false;
+    $('dateBasis').value = 'report';
+    $('focusSearch').value = ''; $('focusResults').hidden = true;
+    $('moreFilters').open = false;
+    document.querySelectorAll('.inline-more').forEach((d) => { d.open = false; });
+    state.focus = null;
+    state.qaType = null;
+    showTab('filters');
+    document.querySelectorAll('.panel').forEach((p) => { p.scrollTop = 0; });
+
+    if (state.data) {
+      initFilters();
+      update();
+      renderQuality();
+    }
+    userMoved = false;
+    fitHud();
+    if (state.data) toast('Back to the start: whole HUD, all dates, both diseases.');
+  }
+  $('homeBtn').addEventListener('click', goHome);
 
   /* ---------- Help ---------- */
   $('btnHelp').addEventListener('click', () => $('helpDialog').showModal());

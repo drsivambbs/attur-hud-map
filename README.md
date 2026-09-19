@@ -8,7 +8,7 @@ A static web app that maps the IP Fever and Dengue line list for Attur Health Un
 
 ## Using it
 
-The screen is built for non-technical users: a plain sentence at the top says what is shown ("Showing Dengue and IP Fever in Valapadi block, the last 4 weeks"), five large numbers follow, and the Filter tab has three steps – **Where?** (one dropdown of blocks, or type a PHC / village), **When?** (This week, 2 weeks, 4 weeks, This month, Everything) and **Which disease?**. Everything else sits under **More filters**. Clusters are called **hotspots** on screen; the hotspot rule is one editable sentence. **Help** (top bar) explains each step and word.
+The screen is built for non-technical users: a plain sentence at the top says what is shown ("Showing Dengue and IP Fever in Valapadi block, the last 4 weeks"), five large numbers follow, and the Filter tab has three steps – **Where?** (one dropdown of blocks, or type a PHC / village), **When?** (This week, 2 weeks, 4 weeks, This month, Everything) and **Which disease?**. Everything else sits under **More filters**. **Home** (top left of the map) returns to the fresh view: whole HUD, all dates, both diseases, nothing selected (background map, dot size and Hide names are kept). With **Village borders** on, pointing at the map shows the village name, type, block and cases shown. Clusters are called **hotspots** on screen; the hotspot rule is one editable sentence. **Help** (top bar) explains each step and word.
 
 Details:
 

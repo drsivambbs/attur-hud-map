@@ -273,6 +273,10 @@
       <div id="map" aria-label="Case map"></div>
 
       <div class="map-top">
+        <button type="button" class="home-btn" id="homeBtn" title="Back to the start: whole HUD, all dates, no selection">
+          <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M3.5 11.2L12 4l8.5 7.2M6 9.6V20h4.5v-5.5h3V20H18V9.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Home
+        </button>
         <button type="button" class="fit-btn" id="fitBtn" title="Zoom to the selected area">Full HUD</button>
         <div class="focus-chip" id="focusChip" hidden>
           <span id="focusChipText"></span>
@@ -358,6 +362,8 @@
       </ol>
       <h3>Words used</h3>
       <dl class="glossary">
+        <dt>Home</dt><dd>The button at the top left of the map. It clears every choice and shows the whole HUD again, as when the map was first opened.</dd>
+        <dt>Village names</dt><dd>Turn on "Village borders" in Map options, then point at the map to see each village's name, block and cases.</dd>
         <dt>Hotspot</dt><dd>A group of cases close together in place and time. The rule is shown at the top of the Hotspots tab and can be changed.</dd>
         <dt>Active hotspot</dt><dd>A hotspot with a case in the last 14 days (or the number of days chosen). "Over" means no recent case.</dd>
         <dt>New this week</dt><dd>Cases in the 7 days up to the latest date in the file.</dd>

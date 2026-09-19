@@ -355,6 +355,20 @@ details > summary::-webkit-details-marker { display: none; }
   border: 1px solid var(--line); background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); font-weight: 500; font-size: 13.5px;
 }
 .fit-btn:hover { border-color: var(--accent); }
+.home-btn {
+  display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px 0 11px; flex: none; cursor: pointer;
+  border: 1px solid var(--accent); border-radius: 8px; background: var(--surface); color: var(--accent);
+  box-shadow: var(--shadow-sm); font-weight: 600; font-size: 13.5px;
+}
+.home-btn:hover { background: var(--accent); color: var(--accent-ink); }
+.village-tip {
+  background: rgba(255, 255, 255, .97) !important; border: 1px solid #0e6e5f !important; border-radius: 7px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,.18) !important; padding: 5px 9px !important; color: #16201d !important;
+  font: 13px/1.35 var(--sans) !important; white-space: nowrap;
+}
+.village-tip b { font-weight: 600; font-size: 14px; }
+.village-tip span { color: #5d6a65; font-size: 12px; }
+.village-tip::before { display: none; }
 .focus-chip {
   display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 6px 0 14px; min-width: 0;
   border-radius: 8px; background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow-sm); font-weight: 600; font-size: 14px;
