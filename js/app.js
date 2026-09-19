@@ -127,7 +127,7 @@
   };
   let currentBase = basemaps.osm.addTo(map);
   L.control.scale({ metric: true, imperial: false, position: 'bottomright' }).addTo(map);
-  map.attributionControl.setPrefix('EpiTrack Attur · designed by Dr. M. Sivachandran Mathiyazagan · <a href="https://leafletjs.com">Leaflet</a>');
+  map.attributionControl.setPrefix('EpiTrack Attur · Designed by Dr. M. Sivachandran Mathiyazagan, MBBS, MPH (ICMR-NIE) · <a href="https://leafletjs.com">Leaflet</a>');
   [['mask', 395], ['villages', 400], ['blocks', 410], ['hud', 420], ['focus', 425], ['heat', 430], ['clusters', 440], ['cases', 450]]
     .forEach(([n, z]) => { map.createPane(n); map.getPane(n).style.zIndex = z; });
   map.getPane('villages').style.pointerEvents = 'none';
