@@ -110,7 +110,10 @@
     };
 
     // Fade everything outside the HUD (or the selected area) so it reads as the subject.
-    const subject = app.focusGeometry() || HUD.hud.features[0].geometry;
+    // A block dashboard passes its own area, cases and hotspots; otherwise the screen's view is used.
+    const focusGeom = opt.subject || app.focusGeometry();
+    const subject = focusGeom || HUD.hud.features[0].geometry;
+    const clusterList = opt.clusterList || st.clusters;
     ctx.save();
     ctx.beginPath(); ctx.rect(0, 0, W, H); tracePolys(subject);
     ctx.fillStyle = base ? 'rgba(255,255,255,0.5)' : 'rgba(230,233,231,0.9)';
@@ -123,11 +126,12 @@
     if (app.layerOn('lyrVillages')) strokeFC(HUD.villages, 'rgba(70,70,70,0.5)', 0.7);
     if (app.layerOn('lyrBlocks')) strokeFC(HUD.blocks, '#1b1b1b', 1.6);
     if (app.layerOn('lyrHud')) strokeFC(HUD.hud, '#b3202a', 3.2);
-    if (app.focusGeometry()) strokeFC({ features: [{ geometry: app.focusGeometry() }] }, '#0e6e5f', 4);
+    if (focusGeom) strokeFC({ features: [{ geometry: focusGeom }] }, '#0e6e5f', 4);
 
     const onlyCl = app.layerOn('optOnlyClustered') || opt.mode === 'cluster-only';
-    const ctxSet = new Set(st.contextCases.map((c) => c.uid));
-    const pts = st.filtered.concat(st.contextCases)
+    const ctxCases = opt.contextCases || st.contextCases;
+    const ctxSet = new Set(ctxCases.map((c) => c.uid));
+    const pts = (opt.cases || st.filtered).concat(ctxCases)
       .filter((c) => c.lat !== null && (!onlyCl || st.membership.has(c.uid)))
       .sort((a, z) => app.eday(a) - app.eday(z));
     // Rarer and more important points go on top: Dengue over IP Fever, clustered over unclustered.
@@ -157,7 +161,7 @@
     }
 
     if (opt.clusters) {
-      st.clusters.forEach((c) => {
+      clusterList.forEach((c) => {
         const [x, y] = P(c.lat, c.lon);
         const r = Math.max(120, c.radius + 80) / mpp(c.lat);
         const col = c.status === 'Active' ? '#d9480f' : '#6c757d';
@@ -170,7 +174,7 @@
       });
     }
 
-    const r0 = st.pointSize * S * 0.95;
+    const r0 = st.pointSize * S * 0.95 * (opt.pointScale || 1);
     drawOrder.forEach((c) => {
       const [x, y] = P(c.lat, c.lon);
       const member = st.membership.has(c.uid);
@@ -204,7 +208,7 @@
     if (opt.clusterLabels) {
       const hit = (a) => a.x < 2 || a.y < 2 || a.x + a.w > W - 2 || a.y + a.h > H - 2 ||
         placed.some((b2) => a.x < b2.x + b2.w && a.x + a.w > b2.x && a.y < b2.y + b2.h && a.y + a.h > b2.y);
-      st.clusters.slice().sort((a, z) => z.members.length - a.members.length).forEach((c) => {
+      clusterList.slice().sort((a, z) => z.members.length - a.members.length).forEach((c) => {
         const [x, y] = P(c.lat, c.lon);
         const r = Math.max(120, c.radius + 80) / mpp(c.lat);
         const text = `${c.id} · ${c.members.length}`;
@@ -609,6 +613,143 @@
       });
     }
 
+    /* ---------- 5b. Block dashboards: one slide per block ---------- */
+    if (o.blocks) {
+      const HUD = app.HUD, LL = app.LL;
+      const MPTY = { 'Attur Mpty': 'Attur (M)', 'Narasingapuram Mpty': 'Narasingapuram (M)' };
+      const blockFeature = (b) => (MPTY[b]
+        ? HUD.villages.features.find((v) => v.properties.village_name === MPTY[b])
+        : HUD.blocks.features.find((v) => v.properties.health_block === LL.HEALTH_BLOCK[b]));
+      const blockLabel = (b) => (MPTY[b] ? b.replace(/ Mpty$/, ' Municipality') : `${b} block`);
+      const totals = app.countBy(st.filtered, 'block');
+      const names = [...totals.keys()].filter((b) => b !== 'Not stated')
+        .sort((a, b) => { const ia = app.BLOCK_ORDER.indexOf(a), ib = app.BLOCK_ORDER.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b); });
+      const ranked = [...totals.entries()].filter(([b]) => b !== 'Not stated').sort((a, b) => b[1] - a[1]).map(([b]) => b);
+      const ordinal = (n) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th')}`;
+      const allCl = st.allClusters || st.clusters;
+      const monday = (x) => x - ((new Date(x * 86400000).getUTCDay() + 6) % 7);
+      const lastMonday = monday(ref);
+      const weekKeys = Array.from({ length: 12 }, (_, i) => lastMonday - (11 - i) * 7);
+      const hudTotal = st.filtered.length;
+
+      for (let bi = 0; bi < names.length; bi++) {
+        const b = names[bi];
+        if (o.onProgress) o.onProgress(`block ${bi + 1} of ${names.length}`);
+        const cases = st.filtered.filter((c) => c.block === b);
+        const inBlock = new Set(cases.map((c) => c.uid));
+        const cls = allCl.filter((c) => c.members.some((m) => m.block === b && inBlock.has(m.uid)));
+        const ctx = [];
+        cls.forEach((c) => c.members.forEach((m) => { if (!inBlock.has(m.uid)) ctx.push(m); }));
+        const feat = blockFeature(b);
+        const dis = app.countBy(cases, 'disease');
+        const thisWk = cases.filter((c) => app.eday(c) > ref - 7).length;
+        const prevWk = cases.filter((c) => { const d = app.eday(c); return d > ref - 14 && d <= ref - 7; }).length;
+        const act = cls.filter((c) => c.status === 'Active');
+        const rank = ranked.indexOf(b) + 1;
+        const hb = LL.HEALTH_BLOCK[b];
+
+        const s = newSlide(`Block dashboard – ${blockLabel(b)}`,
+          `${period}${hb && hb !== b && !MPTY[b] ? ` · ${hb} health block` : ''} · ${ordinal(rank)} highest of ${ranked.length} blocks by cases`);
+
+        // 1. Six key figures
+        const diff = thisWk - prevWk;
+        const tiles = [
+          ['Total cases', app.fmtN(cases.length), C.ink, ''],
+          ['Dengue', app.fmtN(dis.get('Dengue') || 0), C.dengue, ''],
+          ['IP Fever', app.fmtN(dis.get('IP Fever') || 0), C.fever, ''],
+          ['This week', app.fmtN(thisWk), C.ink, prevWk || thisWk ? `${diff > 0 ? '▲' : diff < 0 ? '▼' : '='} ${diff > 0 ? '+' : ''}${diff} vs last week (${prevWk})` : 'none in last 2 weeks'],
+          ['Active hotspots', String(act.length), C.active, cls.length ? `${cls.length} in period` : 'none'],
+          ['Share of HUD cases', `${hudTotal ? Math.round((cases.length / hudTotal) * 100) : 0}%`, C.accent, `${app.fmtN(cases.length)} of ${app.fmtN(hudTotal)}`]
+        ];
+        const tw = (SLIDE_W - 0.9 - 5 * 0.14) / 6;
+        tiles.forEach(([label, value, color, note], i) => {
+          const x = 0.45 + i * (tw + 0.14);
+          s.addShape(pptx.ShapeType.rect, { x, y: 1.25, w: tw, h: 1.02, fill: { color: C.panel }, line: { color: C.line, width: 0.75 } });
+          s.addShape(pptx.ShapeType.rect, { x, y: 1.25, w: 0.06, h: 1.02, fill: { color }, line: { color, width: 0 } });
+          s.addText(label, { x: x + 0.17, y: 1.3, w: tw - 0.22, h: 0.26, fontFace: FONT, fontSize: 11, color: C.ink2, margin: 0 });
+          s.addText(value, { x: x + 0.17, y: 1.55, w: tw - 0.22, h: 0.46, fontFace: FONT, fontSize: 26, bold: true, color, margin: 0, valign: 'middle' });
+          if (note) {
+            const noteColor = label === 'This week' ? (diff > 0 ? C.dengue : diff < 0 ? '2F9E44' : C.ink3) : C.ink3;
+            s.addText(note, { x: x + 0.17, y: 2.0, w: tw - 0.22, h: 0.22, fontFace: FONT, fontSize: 9.5, color: noteColor, margin: 0, fit: 'shrink' });
+          }
+        });
+
+        // 2. Block map
+        const MAP = { x: 0.45, y: 2.45, w: 5.75, h: 4.45 };
+        let bb = feat ? L.geoJSON(feat).getBounds() : null;
+        const pts = cases.concat(ctx).filter((c) => c.lat !== null).map((c) => [c.lat, c.lon]);
+        if (pts.length) bb = bb ? bb.extend(L.latLngBounds(pts)) : L.latLngBounds(pts);
+        if (bb) {
+          const img = await renderMap({
+            bounds: bb.pad(0.06), width: 1300, height: Math.round((1300 * MAP.h) / MAP.w), mode: 'disease',
+            clusters: true, clusterLabels: true, heat: false, pointScale: 1.3,
+            subject: feat ? feat.geometry : null, cases, contextCases: ctx, clusterList: cls
+          });
+          s.addImage({ data: img.data, x: MAP.x, y: MAP.y, w: MAP.w, h: MAP.h });
+        }
+        const byD = app.countBy(cases.filter((c) => c.lat !== null), 'disease');
+        const legend = [
+          { text: '● ', options: { color: C.dengue } }, { text: `Dengue ${byD.get('Dengue') || 0}    `, options: { color: C.ink2 } },
+          { text: '● ', options: { color: C.fever } }, { text: `IP Fever ${byD.get('IP Fever') || 0}    `, options: { color: C.ink2 } },
+          { text: '◌ ', options: { color: C.active, bold: true } }, { text: 'Active hotspot    ', options: { color: C.ink2 } },
+          { text: '◌ ', options: { color: C.closed, bold: true } }, { text: 'Over', options: { color: C.ink2 } }
+        ];
+        s.addText(legend, { x: MAP.x + 0.1, y: MAP.y + 0.08, w: 4.6, h: 0.28, fontFace: FONT, fontSize: 10, margin: [2, 6, 2, 6], fill: { color: 'FFFFFF', transparency: 8 } });
+
+        // 3. Weekly trend (last 12 weeks)
+        const RX = 6.4, RW = SLIDE_W - 0.45 - RX;
+        const wkCount = new Map();
+        cases.forEach((c) => { const k = `${c.disease}|${monday(app.eday(c))}`; wkCount.set(k, (wkCount.get(k) || 0) + 1); });
+        const series = ['Dengue', 'IP Fever'].filter((d) => st.f.disease.has(d)).map((d) => ({
+          name: d, labels: weekKeys.map((m) => `W${LL.isoWeek(m).week}`), values: weekKeys.map((m) => wkCount.get(`${d}|${m}`) || 0)
+        }));
+        const peak = weekKeys.reduce((m, k) => Math.max(m, series.reduce((t, x) => t + (wkCount.get(`${x.name}|${k}`) || 0), 0)), 0);
+        s.addText('Cases in the last 12 weeks', { x: RX, y: 2.42, w: RW, h: 0.28, fontFace: FONT, fontSize: 12, bold: true, color: C.ink, margin: 0 });
+        if (series.length) {
+          s.addChart(pptx.ChartType.bar, series, {
+            x: RX - 0.05, y: 2.68, w: RW + 0.05, h: 1.95, barDir: 'col', barGrouping: 'stacked', barGapWidthPct: 40,
+            chartColors: series.map((x) => hex(app.DISEASE_COLOR[x.name])), showLegend: true, legendPos: 'r', legendFontSize: 9, legendFontFace: FONT,
+            catAxisLabelFontSize: 8.5, catAxisLabelFontFace: FONT, catAxisLabelColor: C.ink2,
+            valAxisLabelFontSize: 8.5, valAxisLabelFontFace: FONT, valAxisLabelColor: C.ink2, valAxisLabelFormatCode: '0',
+            ...(peak <= 8 ? { valAxisMajorUnit: 1, valAxisMaxVal: Math.max(2, peak + 1), valAxisMinVal: 0 } : {}),
+            valGridLine: { color: 'E3E8E5', style: 'solid', size: 0.5 }, catGridLine: { style: 'none' }, showValue: false
+          });
+        }
+
+        // 4. Two tables: PHCs, and hotspots touching the block
+        const TY = 4.78, PW = 2.7, HW = RW - PW - 0.2;
+        const hdr = (t, r) => ({ text: t, options: { bold: true, color: 'FFFFFF', fill: { color: C.accent }, align: r ? 'right' : 'left', fontSize: 10 } });
+        const zebra = (i) => ({ color: i % 2 ? 'FFFFFF' : 'F7F9F8' });
+        const phc = new Map();
+        cases.forEach((c) => {
+          if (!phc.has(c.phc)) phc.set(c.phc, { n: 0, wk: 0 });
+          const r = phc.get(c.phc); r.n++; if (app.eday(c) > ref - 7) r.wk++;
+        });
+        const phcRows = [...phc.entries()].sort((a, z) => z[1].n - a[1].n).slice(0, 6);
+        s.addText('PHCs', { x: RX, y: TY - 0.02, w: PW, h: 0.26, fontFace: FONT, fontSize: 12, bold: true, color: C.ink, margin: 0 });
+        s.addTable([[hdr('PHC'), hdr('Cases', 1), hdr('This week', 1)]].concat(phcRows.map(([name, r], i) => [
+          { text: name, options: { fill: zebra(i) } },
+          { text: String(r.n), options: { fill: zebra(i), align: 'right', bold: true } },
+          { text: r.wk ? String(r.wk) : '–', options: { fill: zebra(i), align: 'right', color: r.wk ? C.dengue : C.ink3 } }
+        ])), { x: RX, y: TY + 0.28, w: PW, colW: [PW - 1.3, 0.55, 0.75], fontFace: FONT, fontSize: 10, color: C.ink, rowH: 0.26, border: { type: 'solid', pt: 0.5, color: C.line }, margin: [1, 4, 1, 4], autoPage: false });
+
+        const HX = RX + PW + 0.2;
+        const hot = cls.slice().sort((a, z) => (a.status === z.status ? 0 : a.status === 'Active' ? -1 : 1) || z.last - a.last).slice(0, 6);
+        s.addText('Hotspots in this block', { x: HX, y: TY - 0.02, w: HW, h: 0.26, fontFace: FONT, fontSize: 12, bold: true, color: C.ink, margin: 0 });
+        if (hot.length) {
+          s.addTable([[hdr('ID'), hdr('Place'), hdr('Cases', 1), hdr('Status')]].concat(hot.map((c, i) => [
+            { text: c.id, options: { fill: zebra(i), bold: true, fontFace: 'Consolas', color: c.key === 'Dengue' ? C.dengue : c.key === 'IP Fever' ? C.fever : C.accent } },
+            { text: c.places[0] ? c.places[0][0] : '', options: { fill: zebra(i) } },
+            { text: String(c.members.length), options: { fill: zebra(i), align: 'right', bold: true } },
+            { text: c.status === 'Active' ? `Active${c.recent7 ? ` (${c.recent7} wk)` : ''}` : 'Over', options: { fill: zebra(i), color: c.status === 'Active' ? C.active : C.closed, bold: c.status === 'Active' } }
+          ])), { x: HX, y: TY + 0.28, w: HW, colW: [0.66, HW - 0.66 - 0.5 - 0.98, 0.5, 0.98], fontFace: FONT, fontSize: 10, color: C.ink, rowH: 0.26, border: { type: 'solid', pt: 0.5, color: C.line }, margin: [1, 4, 1, 4], autoPage: false });
+          if (cls.length > hot.length) s.addText(`+ ${cls.length - hot.length} more in the hotspot list`, { x: HX, y: TY + 0.28 + 0.26 * (hot.length + 1) + 0.04, w: HW, h: 0.22, fontFace: FONT, fontSize: 9, color: C.ink3, margin: 0 });
+        } else {
+          s.addText('No hotspots in this block for the period.', { x: HX, y: TY + 0.32, w: HW, h: 0.5, fontFace: FONT, fontSize: 11, color: C.ink3, margin: 0 });
+        }
+      }
+    }
+
     /* ---------- 6. Methods and data quality ---------- */
     if (o.methods) {
       const s = newSlide('Methods and data quality', 'How the map and clusters were produced, and what to check in the line list');
@@ -666,7 +807,7 @@
     get(k, d) { try { const v = localStorage.getItem('attur.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem('attur.' + k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } }
   };
-  const OPTS = ['pptCover', 'pptCaseMap', 'pptClusterMap', 'pptClusterList', 'pptSummary', 'pptMethods'];
+  const OPTS = ['pptCover', 'pptCaseMap', 'pptClusterMap', 'pptClusterList', 'pptSummary', 'pptBlocks', 'pptMethods'];
 
   function open() {
     const app = A();
@@ -691,7 +832,9 @@
       subtitle: $('pptSubtitle').value.trim(),
       extent: document.querySelector('input[name="pptExtent"]:checked').value,
       cover: $('pptCover').checked, caseMap: $('pptCaseMap').checked, clusterMap: $('pptClusterMap').checked,
-      clusterList: $('pptClusterList').checked, summary: $('pptSummary').checked, methods: $('pptMethods').checked
+      clusterList: $('pptClusterList').checked, summary: $('pptSummary').checked, methods: $('pptMethods').checked,
+      blocks: $('pptBlocks').checked,
+      onProgress: (t) => { $('pptCreate').textContent = `Building… ${t}`; }
     };
     if (!OPTS.some((id) => $(id).checked)) { app.toast('Choose at least one slide.', true); return; }
     store.set('pptSlides', Object.fromEntries(OPTS.map((id) => [id, $(id).checked])));
@@ -705,7 +848,7 @@
       app.toast(`The PowerPoint could not be created: ${err.message}`, true);
     } finally {
       $('pptCreate').disabled = false;
-      $('pptCreate').textContent = 'Create PowerPoint';
+      $('pptCreate').textContent = 'Download PowerPoint';
     }
   });
 
