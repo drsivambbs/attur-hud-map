@@ -91,9 +91,18 @@ python -m http.server 8765 --directory Attur_HUD_GIS
 
 Then open http://localhost:8765.
 
-## Put it online
+## Online
 
-Plain static files, no build step: GitHub Pages, Netlify (drag the folder onto app.netlify.com/drop) or any web server. **Never put the line-list Excel files in this folder** – the app is designed so that patient data stays on the user's computer.
+**Live at https://drsivambbs.github.io/attur-hud-map/** (GitHub Pages, from the `main` branch of this repository).
+
+Anyone with the link can open the app, but not any data: each user loads their own Excel file, which is read only in their browser. **Never add line-list Excel files to this repository** – `.gitignore` blocks `.xlsx`, `.xls` and `.csv` files (except the blank template) as a safety net.
+
+To publish a change:
+
+- **From this computer:** `git add -A`, `git commit -m "what changed"`, `git push`. The site updates about a minute later.
+- **Without the command line:** on github.com open the repository → *Add file* → *Upload files*, drop the changed files (keeping the same folder, e.g. `js/app.js`), and press *Commit changes*.
+
+Every version is kept in the repository history, so a bad change can be undone.
 
 ## Sources
 
