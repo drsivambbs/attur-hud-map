@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Attur Fever–Dengue Map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app" id="app">
+
+    <!-- ================= Top bar ================= -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2.5c-3.9 0-7 3-7 6.9 0 5.1 7 12.1 7 12.1s7-7 7-12.1c0-3.9-3.1-6.9-7-6.9z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="9.5" r="2.6" fill="currentColor"/></svg>
+        </span>
+        <div>
+          <p class="eyebrow">Attur HUD · Salem</p>
+          <h1>Fever &amp; Dengue Map</h1>
+        </div>
+      </div>
+
+      <button type="button" class="data-chip" id="datasetChip" hidden title="Load a newer file">
+        <span class="dot-live" aria-hidden="true"></span>
+        <span id="datasetText"></span>
+      </button>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="btnLoad" type="button">
+          <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Load new data</span>
+        </button>
+        <div class="menu-wrap">
+          <button class="btn" id="btnExport" type="button" aria-haspopup="true" aria-expanded="false" disabled>
+            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M12 4v12m0 0l-4-4m4 4l4-4M4 18v1a1 1 0 001 1h14a1 1 0 001-1v-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Download</span>
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <div class="menu" id="exportMenu" role="menu" hidden>
+            <button role="menuitem" type="button" data-export="pptx"><b>PowerPoint report</b><span>Maps, hotspot list and charts, ready to present</span></button>
+            <button role="menuitem" type="button" data-export="cases"><b>Case list (Excel)</b><span>The cases now shown on the map</span></button>
+            <button role="menuitem" type="button" data-export="clusters"><b>Hotspot list (Excel)</b><span>Every hotspot with its cases</span></button>
+            <button role="menuitem" type="button" data-export="issues"><b>Data problems (Excel)</b><span>Rows to correct in the line list</span></button>
+            <button role="menuitem" type="button" data-export="template"><b>Blank template (Excel)</b><span>The standard sheet for entering new cases</span></button>
+          </div>
+        </div>
+        <button class="btn btn-quiet" id="btnHelp" type="button" aria-label="Help">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M9.6 9.3a2.5 2.5 0 014.8.9c0 1.7-2.4 2.1-2.4 3.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="17" r="1.1" fill="currentColor"/></svg>
+          <span>Help</span>
+        </button>
+        <label class="privacy" title="Hide names, phone numbers and addresses on screen and in downloads">
+          <input type="checkbox" id="privacy">
+          <span class="switch" aria-hidden="true"></span>
+          <span>Hide names</span>
+        </label>
+      </div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm,.csv" multiple hidden>
+    </header>
+
+    <!-- ================= Sidebar ================= -->
+    <aside class="sidebar" id="sidebar">
+      <div class="scope" id="scopeLine" aria-live="polite">Load a line-list file to begin.</div>
+      <dl class="kpis" id="kpis"></dl>
+
+      <nav class="tabs" role="tablist" aria-label="Sections">
+        <button role="tab" id="tab-filters" aria-controls="panel-filters" aria-selected="true" type="button">
+          <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Filter</button>
+        <button role="tab" id="tab-clusters" aria-controls="panel-clusters" aria-selected="false" type="button">
+          <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2.4"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/></svg>Hotspots <span class="badge" id="clusterBadge"></span></button>
+        <button role="tab" id="tab-summary" aria-controls="panel-summary" aria-selected="false" type="button">
+          <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>Charts</button>
+        <button role="tab" id="tab-quality" aria-controls="panel-quality" aria-selected="false" type="button">
+          <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Data check <span class="badge warn" id="qaBadge"></span></button>
+      </nav>
+
+      <!-- ---------- Filter ---------- -->
+      <section class="panel" role="tabpanel" id="panel-filters" aria-labelledby="tab-filters">
+        <div class="step">
+          <div class="step-head"><span class="step-no">1</span><h2>Where?</h2><button type="button" class="link" id="focusClear" hidden>Whole HUD</button></div>
+          <label class="sr-only" for="focusSelect">Area</label>
+          <select id="focusSelect" class="big-select"></select>
+          <div class="search">
+            <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <input type="search" id="focusSearch" placeholder="Or type a PHC, village or town" autocomplete="off" aria-label="Find a PHC, village or town">
+            <ul class="results" id="focusResults" hidden></ul>
+          </div>
+          <div id="focusBlocks" hidden></div>
+          <p class="hint" id="focusNote"></p>
+        </div>
+
+        <div class="step">
+          <div class="step-head"><span class="step-no">2</span><h2>When?</h2><span class="hint-inline" id="periodNote"></span></div>
+          <div class="seg-buttons" id="datePresets">
+            <button type="button" data-preset="7">This week</button>
+            <button type="button" data-preset="14">2 weeks</button>
+            <button type="button" data-preset="28">4 weeks</button>
+            <button type="button" data-preset="month">This month</button>
+            <button type="button" data-preset="all">Everything</button>
+          </div>
+          <details class="inline-more">
+            <summary>Choose exact dates</summary>
+            <div class="row2">
+              <label class="field"><span>From</span><input type="date" id="dateFrom"></label>
+              <label class="field"><span>To</span><input type="date" id="dateTo"></label>
+            </div>
+          </details>
+        </div>
+
+        <div class="step">
+          <div class="step-head"><span class="step-no">3</span><h2>Which disease?</h2></div>
+          <div class="disease-toggles" id="fDisease"></div>
+        </div>
+
+        <details class="more-filters" id="moreFilters">
+          <summary><span>More filters</span><span class="badge" id="moreCount"></span></summary>
+          <div class="more-body">
+            <div class="sub-head">Lab result</div>
+            <div class="chips" id="fCondition"></div>
+
+            <div class="sub-head with-links">Block <span class="links"><button type="button" class="link" data-all="fBlock">Select all</button><button type="button" class="link" data-none="fBlock">Clear</button></span></div>
+            <div class="checklist" id="fBlock"></div>
+
+            <div class="sub-head with-links">PHC <span class="links"><button type="button" class="link" data-all="fPhc">Select all</button><button type="button" class="link" data-none="fPhc">Clear</button></span></div>
+            <input type="search" class="mini-search" id="phcSearch" placeholder="Search PHC" autocomplete="off" aria-label="Search PHC">
+            <div class="checklist" id="fPhc"></div>
+
+            <div class="sub-head">Village, town or municipality</div>
+            <div class="chips" id="fArea"></div>
+            <div class="sub-head">Sex</div>
+            <div class="chips" id="fSex"></div>
+            <div class="sub-head">Age group</div>
+            <div class="chips" id="fAge"></div>
+            <div class="sub-head">Dengue – where reported</div>
+            <div class="chips" id="fSource"></div>
+
+            <div class="sub-head">IP Fever date to use</div>
+            <select id="dateBasis" class="plain-select">
+              <option value="report">Date of reporting</option>
+              <option value="adm">Date of admission</option>
+              <option value="onset">Date fever started</option>
+            </select>
+
+            <div class="sub-head">Records</div>
+            <label class="check"><input type="checkbox" id="optInHud" checked> Only cases inside Attur HUD</label>
+            <label class="check"><input type="checkbox" id="optNoDup" checked> Leave out repeated entries</label>
+            <label class="check"><input type="checkbox" id="optNoFeverDengue"> Leave out fever cases later confirmed as dengue</label>
+          </div>
+        </details>
+
+        <div class="panel-foot">
+          <button type="button" class="btn btn-block" id="resetFilters">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Start again (clear all filters)
+          </button>
+        </div>
+      </section>
+
+      <!-- ---------- Hotspots ---------- -->
+      <section class="panel" role="tabpanel" id="panel-clusters" aria-labelledby="tab-clusters" hidden>
+        <div class="step">
+          <p class="rule">
+            A <b>hotspot</b> is
+            <label class="sr-only" for="minPts">minimum cases</label>
+            <select id="minPts" class="inline-select">
+              <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+              <option value="6">6</option><option value="8">8</option><option value="10">10</option>
+            </select>
+            or more cases within
+            <label class="sr-only" for="eps">distance</label>
+            <select id="eps" class="inline-select">
+              <option value="100">100 m</option><option value="200">200 m</option><option value="300">300 m</option>
+              <option value="400">400 m</option><option value="500">500 m</option><option value="750">750 m</option>
+              <option value="1000">1 km</option><option value="1500">1.5 km</option><option value="2000">2 km</option>
+            </select>
+            of each other and within
+            <label class="sr-only" for="days">days</label>
+            <select id="days" class="inline-select">
+              <option value="7">7 days</option><option value="10">10 days</option><option value="14">14 days</option>
+              <option value="21">21 days</option><option value="28">28 days</option>
+            </select>.
+          </p>
+          <span id="epsVal" hidden></span><span id="daysVal" hidden></span><span id="minVal" hidden></span>
+          <div class="seg-buttons small" id="clusterPresets" aria-label="Quick settings">
+            <button type="button" data-eps="200" data-days="10" data-min="3">Tight</button>
+            <button type="button" data-eps="400" data-days="14" data-min="3">Standard</button>
+            <button type="button" data-eps="1000" data-days="21" data-min="4">Broad</button>
+          </div>
+          <details class="inline-more">
+            <summary>Dengue and IP Fever together or apart</summary>
+            <div class="radio-list">
+              <label class="check"><input type="radio" name="pooled" value="0" id="pooled0" checked> Separately (recommended)</label>
+              <label class="check"><input type="radio" name="pooled" value="1" id="pooled1"> Together, as one group of cases</label>
+            </div>
+          </details>
+        </div>
+
+        <div class="step">
+          <dl class="cluster-stats" id="clusterStats"></dl>
+          <p class="nni" id="nni"></p>
+          <div class="list-tools">
+            <div class="seg-buttons small" id="clusterStatusFilter">
+              <button type="button" data-status="all" aria-pressed="true">All</button>
+              <button type="button" data-status="Active" aria-pressed="false">Active</button>
+              <button type="button" data-status="Closed" aria-pressed="false">Over</button>
+            </div>
+            <label class="sr-only" for="clusterSort">Sort hotspots</label>
+            <select id="clusterSort" class="plain-select">
+              <option value="recent">Newest first</option>
+              <option value="size">Biggest first</option>
+              <option value="first">Oldest first</option>
+            </select>
+          </div>
+          <ul class="cluster-list" id="clusterList"></ul>
+        </div>
+      </section>
+
+      <!-- ---------- Charts ---------- -->
+      <section class="panel" role="tabpanel" id="panel-summary" aria-labelledby="tab-summary" hidden>
+        <div class="step">
+          <div class="step-head"><h2>Cases each week</h2><span class="hint-inline">Monday to Sunday</span></div>
+          <div class="chart-box"><canvas id="epiChart" aria-label="Cases each week"></canvas></div>
+        </div>
+        <div class="step">
+          <div class="step-head"><h2>By block</h2></div>
+          <div class="table-wrap"><table class="tbl" id="blockTable"></table></div>
+        </div>
+        <div class="step">
+          <div class="step-head"><h2>Age and sex</h2></div>
+          <div class="chart-box short"><canvas id="ageChart" aria-label="Cases by age group and sex"></canvas></div>
+        </div>
+        <div class="step">
+          <div class="step-head"><h2>Places with most cases</h2></div>
+          <div class="table-wrap"><table class="tbl" id="placeTable"></table></div>
+        </div>
+        <div class="step">
+          <div class="step-head"><h2>Lab results</h2></div>
+          <div class="table-wrap"><table class="tbl" id="condTable"></table></div>
+        </div>
+      </section>
+
+      <!-- ---------- Data check ---------- -->
+      <section class="panel" role="tabpanel" id="panel-quality" aria-labelledby="tab-quality" hidden>
+        <div class="step">
+          <div class="step-head"><h2>Your data file</h2></div>
+          <ul class="files" id="fileList"></ul>
+          <div class="row-actions">
+            <button type="button" class="btn" id="btnAddFile">Add another file</button>
+            <button type="button" class="btn btn-quiet" id="btnForget">Remove data from this computer</button>
+          </div>
+          <label class="check"><input type="checkbox" id="optRemember" checked> Keep the data here for next time</label>
+          <p class="hint">The file is read on this computer only. Nothing is uploaded.</p>
+        </div>
+        <div class="step">
+          <div class="step-head"><h2>Things to correct</h2></div>
+          <p class="hint">Tap a line to see the rows, then tap a row to find it on the map.</p>
+          <div class="qa-summary" id="qaSummary"></div>
+          <ul class="qa-list" id="qaList"></ul>
+        </div>
+      </section>
+    </aside>
+
+    <!-- ================= Map ================= -->
+    <main class="map-wrap">
+      <div id="map" aria-label="Case map"></div>
+
+      <div class="map-top">
+        <button type="button" class="fit-btn" id="fitBtn" title="Zoom to the selected area">Full HUD</button>
+        <div class="focus-chip" id="focusChip" hidden>
+          <span id="focusChipText"></span>
+          <button type="button" id="focusChipClear" aria-label="Back to whole HUD" title="Back to whole HUD">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="map-panel" id="layerPanel">
+        <button type="button" class="map-panel-toggle" id="layerToggle" aria-expanded="false" aria-controls="layerBody">
+          <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5zm-9 9l9 5 9-5M3 16l9 5 9-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          Map options
+          <svg class="chev" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <div class="map-panel-body" id="layerBody" hidden>
+          <div class="mp-label">Colour the dots by</div>
+          <div class="seg-radios">
+            <label><input type="radio" name="colorBy" value="disease" id="cbDisease" checked><span>Disease</span></label>
+            <label><input type="radio" name="colorBy" value="recency" id="cbRecency"><span>How recent</span></label>
+            <label><input type="radio" name="colorBy" value="cluster" id="cbCluster"><span>Hotspot</span></label>
+          </div>
+          <div class="mp-label">Dot size</div>
+          <div class="seg-radios">
+            <label><input type="radio" name="ptSizeSel" value="6"><span>Small</span></label>
+            <label><input type="radio" name="ptSizeSel" value="8"><span>Medium</span></label>
+            <label><input type="radio" name="ptSizeSel" value="11"><span>Large</span></label>
+          </div>
+          <input type="range" id="ptSize" min="3" max="14" step="1" value="8" hidden><span id="ptSizeVal" hidden></span>
+          <div class="mp-label">Show on map</div>
+          <label class="check"><input type="checkbox" id="lyrCases" checked> Cases</label>
+          <label class="check"><input type="checkbox" id="optOnlyClustered"> Only cases in hotspots</label>
+          <label class="check"><input type="checkbox" id="lyrClusters" checked> Hotspot circles</label>
+          <label class="check"><input type="checkbox" id="lyrHeat"> Heat map (case density)</label>
+          <label class="check"><input type="checkbox" id="lyrHud" checked> HUD border</label>
+          <label class="check"><input type="checkbox" id="lyrBlocks" checked> Block borders</label>
+          <label class="check"><input type="checkbox" id="lyrVillages"> Village borders</label>
+          <label class="check"><input type="checkbox" id="lyrLabels" checked> Block names</label>
+          <div class="mp-label">Background</div>
+          <div class="seg-radios">
+            <label><input type="radio" name="base" value="osm" id="baseOsm" checked><span>Street map</span></label>
+            <label><input type="radio" name="base" value="hot" id="baseHot"><span>Humanitarian</span></label>
+            <label><input type="radio" name="base" value="none" id="baseNone"><span>Plain</span></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="legend-box" id="legendBox"></div>
+
+      <div class="empty" id="emptyState">
+        <div class="empty-card">
+          <h2>Welcome</h2>
+          <p class="lead">See where Dengue and IP Fever cases are, and where they are grouping into hotspots.</p>
+          <ol class="steps">
+            <li><span>1</span><div><b>Fill the line list</b> in the standard Excel template.<br><button type="button" class="link" id="btnTemplate2">Download the blank template</button></div></li>
+            <li><span>2</span><div><b>Load the file</b> with the button below, or drag it onto this page.</div></li>
+            <li><span>3</span><div><b>Choose where and when</b> on the left. Download a PowerPoint when ready.</div></li>
+          </ol>
+          <button type="button" class="btn btn-primary btn-lg" id="btnLoad2">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Choose the Excel file
+          </button>
+          <p class="hint">The file stays on this computer. Nothing is uploaded.</p>
+        </div>
+      </div>
+      <div class="drop" id="dropZone" hidden><div>Drop the Excel file here</div></div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- ================= Help ================= -->
+  <dialog class="dlg" id="helpDialog" aria-labelledby="helpHead">
+    <div class="dlg-inner">
+      <div class="dlg-title"><h2 id="helpHead">How to use this map</h2><button type="button" class="icon-close" id="helpClose" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></div>
+      <ol class="steps">
+        <li><span>1</span><div><b>Load new data</b> – choose the latest line-list Excel. It is remembered on this computer for next time.</div></li>
+        <li><span>2</span><div><b>Filter</b> – pick the area (a block, PHC or village), the period and the disease. The numbers and the map change at once.</div></li>
+        <li><span>3</span><div><b>Hotspots</b> – see where cases are grouping. Tap a hotspot to zoom to it and see its cases.</div></li>
+        <li><span>4</span><div><b>Download</b> – get a ready PowerPoint, or the case and hotspot lists in Excel.</div></li>
+      </ol>
+      <h3>Words used</h3>
+      <dl class="glossary">
+        <dt>Hotspot</dt><dd>A group of cases close together in place and time. The rule is shown at the top of the Hotspots tab and can be changed.</dd>
+        <dt>Active hotspot</dt><dd>A hotspot with a case in the last 14 days (or the number of days chosen). "Over" means no recent case.</dd>
+        <dt>New this week</dt><dd>Cases in the 7 days up to the latest date in the file.</dd>
+        <dt>IP Fever</dt><dd>In-patient fever cases (Fever sheet). Dengue = lab-confirmed dengue (DENGUE sheet).</dd>
+        <dt>Data check</dt><dd>Rows with missing or doubtful details, such as no location or a date that does not add up.</dd>
+        <dt>Hide names</dt><dd>Removes names, phone numbers and addresses from the screen and from downloads, for meetings.</dd>
+      </dl>
+      <div class="dlg-actions">
+        <button type="button" class="btn" id="btnTemplate">Download blank template</button>
+        <button type="button" class="btn btn-primary" id="helpOk">Got it</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ================= PowerPoint ================= -->
+  <dialog class="dlg" id="pptDialog" aria-labelledby="pptTitleHead">
+    <form method="dialog" id="pptForm" class="dlg-inner">
+      <div class="dlg-title"><h2 id="pptTitleHead">Download a PowerPoint report</h2></div>
+      <p class="hint">Made from what is on the screen now: the area, period, disease and hotspots.</p>
+      <label class="field"><span>Title</span><input type="text" id="pptTitle" maxlength="90"></label>
+      <label class="field"><span>Line under the title</span><input type="text" id="pptSubtitle" maxlength="140"></label>
+      <div class="dlg-row">
+        <div>
+          <div class="sub-head">Map shows</div>
+          <label class="check"><input type="radio" name="pptExtent" value="hud" checked> <span id="pptExtentArea">Whole HUD</span></label>
+          <label class="check"><input type="radio" name="pptExtent" value="view"> The map as I see it now</label>
+        </div>
+        <div>
+          <div class="sub-head">Slides</div>
+          <label class="check"><input type="checkbox" id="pptCover" checked> Title page with key numbers</label>
+          <label class="check"><input type="checkbox" id="pptCaseMap" checked> Map of cases</label>
+          <label class="check"><input type="checkbox" id="pptClusterMap" checked> Map of hotspots</label>
+          <label class="check"><input type="checkbox" id="pptClusterList" checked> List of hotspots</label>
+          <label class="check"><input type="checkbox" id="pptSummary" checked> Weekly trend and blocks</label>
+          <label class="check"><input type="checkbox" id="pptMethods" checked> How it was made, data check</label>
+        </div>
+      </div>
+      <div class="dlg-actions">
+        <button type="button" class="btn btn-quiet" id="pptCancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="pptCreate" value="create">Download PowerPoint</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+  <script src="data/hud-data.js"></script>
+  <script src="js/parser.js"></script>
+  <script src="js/analysis.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/report.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+# Never publish line lists or any patient data: only the blank template is allowed.
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+!template/Attur_HUD_line_list_template.xlsx
+*.pptx
+~$*
+.DS_Store
+Thumbs.db
