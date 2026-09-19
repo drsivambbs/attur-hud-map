@@ -246,6 +246,10 @@
   }
 
   const PREFIX = { 'Dengue': 'DEN', 'IP Fever': 'IPF', 'All': 'ALL' };
+  // With "at any time" (a very long window) a place is Active if it had a case in the last 14 days.
+  const ANY_TIME = 3650;
+  const activeWindow = (days) => (days > 60 ? 14 : days);
+  const windowText = (days) => (days > 60 ? 'at any time' : `within ${days} days`);
   const topCounts = (arr, k = 3) => {
     const m = new Map();
     arr.filter(Boolean).forEach((v) => m.set(v, (m.get(v) || 0) + 1));
@@ -278,7 +282,7 @@
           blocks: topCounts(members.map((m) => m.block)),
           places: topCounts(members.map((m) => m.village || m.localBody), 4),
           recent7: members.filter((m) => m.day > asOf - 7).length,
-          status: asOf - last <= days ? 'Active' : 'Closed',
+          status: asOf - last <= activeWindow(days) ? 'Active' : 'Closed',
           isNew: first > asOf - 7
         };
       }).sort((a, b) => a.first - b.first || b.members.length - a.members.length);
@@ -319,5 +323,5 @@
     return { ratio: observed / expected, z: (observed - expected) / se, observed, expected };
   }
 
-  global.Analysis = { haversine, buildGeoIndex, enrichAndCheck, stDbscan, findClusters, nearestNeighbourIndex };
+  global.Analysis = { haversine, buildGeoIndex, enrichAndCheck, stDbscan, findClusters, nearestNeighbourIndex, activeWindow, windowText, ANY_TIME };
 })(typeof window !== 'undefined' ? window : globalThis);

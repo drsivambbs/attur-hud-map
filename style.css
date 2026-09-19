@@ -369,6 +369,13 @@ details > summary::-webkit-details-marker { display: none; }
 .village-tip b { font-weight: 600; font-size: 14px; }
 .village-tip span { color: #5d6a65; font-size: 12px; }
 .village-tip::before { display: none; }
+.stack-badge { pointer-events: none; }
+.stack-badge span {
+  display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
+  background: #16201d; color: #fff; font: 700 11px/1 var(--sans); box-shadow: 0 0 0 2px #fff;
+}
+.pop .stack { margin-top: 7px; padding: 6px 8px; border-radius: 6px; background: #eef4f2; font-size: 12.5px; }
+.pop .stack b { display: block; margin-bottom: 2px; }
 .focus-chip {
   display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 6px 0 14px; min-width: 0;
   border-radius: 8px; background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow-sm); font-weight: 600; font-size: 14px;

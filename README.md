@@ -65,6 +65,8 @@ Two cases are neighbours when they are within **distance** metres of each other 
 
 - Default: 400 m (about the flight range of *Aedes*), 14 days, 3 cases, each disease clustered separately.
 - **Active** = a case within the time window of the latest date shown; otherwise **Closed**. **New this week** = first case in the last 7 days.
+- **Place only** (time window "at any time") ignores dates: it finds places with 3+ cases within 400 m over the whole period – long-running problem spots that never reach 3 cases in 14 days, which the eye picks up on the map but the Standard rule does not. With this window a place is Active if it had a case in the last 14 days. On the Aug–Sep 2026 file: Standard 16 hotspots, Place only 26 (10 extra places such as Muttampatti, Olaipadi, Kattukkottai).
+- **Stacked dots**: cases sharing one location (about 10 m) are drawn on top of each other; from zoom 12 the dot shows a count badge and its popup lists the other cases there. (In Aug–Sep 2026, 74 of 445 cases shared a spot with another case.) Block-dashboard maps in the PowerPoint show the same counts.
 - Cluster IDs (IPF-01, DEN-01 …) are numbered by first case date and change when the settings or filters change.
 - The **nearest-neighbour ratio** (Clark–Evans) tests whether the cases shown are more clustered than random across the HUD (ratio < 1, z < −1.96).
 

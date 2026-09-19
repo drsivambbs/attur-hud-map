@@ -141,6 +141,9 @@
       .setLatLng([p.label_lat, p.label_lon]).setContent(esc(ll));
   })).addTo(map);
   const caseLayer = L.layerGroup().addTo(map);
+  const stackLayer = L.layerGroup().addTo(map);
+  const spotKey = (c) => `${c.lat.toFixed(4)},${c.lon.toFixed(4)}`; // about 10 m
+  let spots = new Map();
   // Case points are drawn on one canvas rather than one SVG element each, so large files stay smooth.
   const caseRenderer = L.canvas({ pane: 'cases', padding: 0.3, tolerance: 3 });
   const clusterLayer = L.layerGroup().addTo(map);
@@ -451,7 +454,7 @@
   function syncClusterControls() {
     $('eps').value = state.cl.eps; $('days').value = state.cl.days; $('minPts').value = state.cl.minPts;
     $('epsVal').textContent = state.cl.eps >= 1000 ? `${(state.cl.eps / 1000).toFixed(state.cl.eps % 1000 ? 2 : 0)} km` : `${state.cl.eps} m`;
-    $('daysVal').textContent = `${state.cl.days} days`;
+    $('daysVal').textContent = AN.windowText(state.cl.days);
     $('minVal').textContent = `${state.cl.minPts} cases`;
     document.querySelectorAll('#clusterPresets button').forEach((b) => b.classList.toggle('on',
       +b.dataset.eps === state.cl.eps && +b.dataset.days === state.cl.days && +b.dataset.min === state.cl.minPts));
@@ -618,11 +621,42 @@
         fillOpacity: faint ? 0.35 : 0.92,
         opacity: faint ? 0.5 : 1
       });
-      m.bindPopup(() => popupHtml(c) + (outside ? `<div class="flag">Outside ${esc(state.focus.label)}; shown because it belongs to cluster ${state.membership.get(c.uid)}.</div>` : ''), { maxWidth: 320 });
+      m.bindPopup(() => popupHtml(c) + stackHtml(c) + (outside ? `<div class="flag">Outside ${esc(state.focus.label)}; shown because it belongs to cluster ${state.membership.get(c.uid)}.</div>` : ''), { maxWidth: 320 });
       m.bindTooltip(() => `${esc(state.privacy ? c.disease : c.name)} · ${fmtShort(eday(c))}`, { direction: 'top', offset: [0, -6] });
       m.addTo(caseLayer);
       markerByUid.set(c.uid, m);
     }
+  }
+
+  // Cases that share one spot are drawn on top of each other, so the dot gets a count badge.
+  function renderStacks() {
+    stackLayer.clearLayers();
+    spots = new Map();
+    if (!state.data || !$('lyrCases').checked) return;
+    const onlyCl = $('optOnlyClustered').checked;
+    state.filtered.concat(state.contextCases).forEach((c) => {
+      if (c.lat === null || (onlyCl && !state.membership.has(c.uid))) return;
+      const k = spotKey(c);
+      if (!spots.has(k)) spots.set(k, []);
+      spots.get(k).push(c);
+    });
+    if (map.getZoom() < 12) return;
+    const view = map.getBounds().pad(0.2);
+    spots.forEach((list) => {
+      if (list.length < 2 || !view.contains([list[0].lat, list[0].lon])) return;
+      const off = state.pointSize + 2;
+      L.marker([list[0].lat, list[0].lon], {
+        pane: 'cases', interactive: false, keyboard: false,
+        icon: L.divIcon({ className: 'stack-badge', html: `<span>${list.length}</span>`, iconSize: [0, 0], iconAnchor: [-off + 4, off + 6] })
+      }).addTo(stackLayer);
+    });
+  }
+  map.on('zoomend moveend', () => { if (state.data) renderStacks(); });
+  function stackHtml(c) {
+    const list = c.lat === null ? [] : (spots.get(spotKey(c)) || []).filter((x) => x.uid !== c.uid);
+    if (!list.length) return '';
+    return `<div class="stack"><b>${list.length} other case${list.length === 1 ? '' : 's'} at this same spot</b>${list.slice(0, 8).map((x) =>
+      `${esc(fmtShort(eday(x)))} · ${esc(x.disease)} · ${esc(state.privacy ? ageSex(x) : `${x.name || 'no name'}, ${ageSex(x)}`)}`).join('<br>')}${list.length > 8 ? `<br>and ${list.length - 8} more` : ''}</div>`;
   }
 
   function renderClusterAreas() {
@@ -699,7 +733,7 @@
     if ($('lyrClusters').checked && state.clusters.length) {
       const act = state.clusters.filter((c) => c.status === 'Active').length;
       html += `${html ? '<div class="sep"></div>' : ''}<h3>Hotspots</h3>
-        <div class="li"><span class="ring"></span>Active (case in last ${state.cl.days} days)<span class="n">${act}</span></div>
+        <div class="li"><span class="ring"></span>Active (case in last ${AN.activeWindow(state.cl.days)} days)<span class="n">${act}</span></div>
         <div class="li"><span class="ring closed"></span>Over<span class="n">${state.clusters.length - act}</span></div>`;
     }
     if ($('lyrHeat').checked) html += `${html ? '<div class="sep"></div>' : ''}<div class="li"><span class="sw" style="background:linear-gradient(90deg,#fecc5c,#bd0026);border-radius:3px;width:22px"></span>Case density (heatmap)</div>`;
@@ -725,7 +759,7 @@
       <div class="kpi den"><dt>Dengue</dt><dd>${fmtN(by.get('Dengue') || 0)}</dd></div>
       <div class="kpi ipf"><dt>IP Fever</dt><dd>${fmtN(by.get('IP Fever') || 0)}</dd></div>
       <div class="kpi" title="${fmtShort(ref - 6)} to ${fmtShort(ref)}"><dt>New this week</dt><dd>${fmtN(last7)}</dd></div>
-      <div class="kpi act" title="Hotspots with a case in the last ${state.cl.days} days"><dt>Active hotspots</dt><dd>${act}</dd></div>`;
+      <div class="kpi act" title="Hotspots with a case in the last ${AN.activeWindow(state.cl.days)} days"><dt>Active hotspots</dt><dd>${act}</dd></div>`;
   }
 
   const charts = {};
@@ -913,7 +947,7 @@
       ['Area type', desc('area')], ['Sex', desc('sex')], ['Age group', desc('age')], ['Dengue SSH / OVF', desc('source')],
       ['Only inside HUD', f.inHud ? 'Yes' : 'No'], ['Possible duplicates left out', f.noDup ? 'Yes' : 'No'],
       ['Fever cases already in dengue list left out', f.noFeverDengue ? 'Yes' : 'No'],
-      ['Cluster method', 'ST-DBSCAN'], ['Cluster distance', `${state.cl.eps} m`], ['Cluster time window', `${state.cl.days} days`],
+      ['Cluster method', 'ST-DBSCAN'], ['Cluster distance', `${state.cl.eps} m`], ['Cluster time window', AN.windowText(state.cl.days)],
       ['Minimum cases per cluster', state.cl.minPts], ['Diseases clustered', state.cl.pooled ? 'Together' : 'Separately'],
       ['Status reference date', fmtXl(refDay())], ['Exported', new Date().toLocaleString('en-IN')]
     ].map(([k, v]) => ({ Setting: k, Value: v }));
@@ -1046,8 +1080,8 @@
   map.on('mouseout', () => { lastMove = null; clearVillageHover(); });
   $('lyrVillages').addEventListener('change', (e) => { if (!e.target.checked) clearVillageHover(); });
   layerToggle('lyrLabels', labelLayer);
-  $('lyrCases').addEventListener('change', () => { renderCases(); renderLegend(); });
-  $('optOnlyClustered').addEventListener('change', () => { if (state.data) { renderCases(); renderLegend(); } });
+  $('lyrCases').addEventListener('change', () => { renderCases(); renderStacks(); renderLegend(); });
+  $('optOnlyClustered').addEventListener('change', () => { if (state.data) { renderCases(); renderStacks(); renderLegend(); } });
   $('lyrClusters').addEventListener('change', () => { renderClusterAreas(); renderLegend(); });
   $('lyrHeat').addEventListener('change', () => { renderHeat(); renderLegend(); });
   document.querySelectorAll('input[name="colorBy"]').forEach((r) => r.addEventListener('change', () => { state.colorBy = r.value; if (state.data) { renderCases(); renderLegend(); } }));
@@ -1265,6 +1299,7 @@
     applyFocus();
     renderKpis();
     renderCases();
+    renderStacks();
     renderClusterAreas();
     renderHeat();
     renderLegend();

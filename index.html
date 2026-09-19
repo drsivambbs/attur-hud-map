@@ -180,11 +180,11 @@
               <option value="400">400 m</option><option value="500">500 m</option><option value="750">750 m</option>
               <option value="1000">1 km</option><option value="1500">1.5 km</option><option value="2000">2 km</option>
             </select>
-            of each other and within
-            <label class="sr-only" for="days">days</label>
+            of each other,
+            <label class="sr-only" for="days">time window</label>
             <select id="days" class="inline-select">
-              <option value="7">7 days</option><option value="10">10 days</option><option value="14">14 days</option>
-              <option value="21">21 days</option><option value="28">28 days</option>
+              <option value="7">within 7 days</option><option value="10">within 10 days</option><option value="14">within 14 days</option>
+              <option value="21">within 21 days</option><option value="28">within 28 days</option><option value="3650">at any time</option>
             </select>.
           </p>
           <span id="epsVal" hidden></span><span id="daysVal" hidden></span><span id="minVal" hidden></span>
@@ -192,6 +192,7 @@
             <button type="button" data-eps="200" data-days="10" data-min="3">Tight</button>
             <button type="button" data-eps="400" data-days="14" data-min="3">Standard</button>
             <button type="button" data-eps="1000" data-days="21" data-min="4">Broad</button>
+            <button type="button" data-eps="400" data-days="3650" data-min="3" title="Places with 3 or more cases within 400 m over the whole period, however far apart in time">Place only</button>
           </div>
           <details class="inline-more">
             <summary>Dengue and IP Fever together or apart</summary>
@@ -365,6 +366,9 @@
         <dt>Home</dt><dd>The button at the top left of the map. It clears every choice and shows the whole HUD again, as when the map was first opened.</dd>
         <dt>Village names</dt><dd>Turn on "Village borders" in Map options, then point at the map to see each village's name, block and cases.</dd>
         <dt>Hotspot</dt><dd>A group of cases close together in place and time. The rule is shown at the top of the Hotspots tab and can be changed.</dd>
+        <dt>Place only</dt><dd>A hotspot rule that ignores dates: it shows places where cases keep coming back over weeks. Use it with "Standard" to see both outbreaks and long-running problem spots.</dd>
+        <dt>Stacked dots</dt><dd>When several cases share the same location, the dot shows a number when zoomed in, and clicking it lists all of them.</dd>
+        <dt>Dengue + IP Fever</dt><dd>Hotspots count each disease separately. To see places where both diseases occur together, choose "Together" on the Hotspots tab.</dd>
         <dt>Active hotspot</dt><dd>A hotspot with a case in the last 14 days (or the number of days chosen). "Over" means no recent case.</dd>
         <dt>New this week</dt><dd>Cases in the 7 days up to the latest date in the file.</dd>
         <dt>IP Fever</dt><dd>In-patient fever cases (Fever sheet). Dengue = lab-confirmed dengue (DENGUE sheet).</dd>

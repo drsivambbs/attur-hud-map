@@ -186,6 +186,23 @@
       ctx.lineWidth = 1.3 * S; ctx.strokeStyle = '#ffffff'; ctx.stroke();
     });
 
+    if (opt.stackCounts) {
+      const spot = new Map();
+      drawOrder.forEach((c) => { const k = `${c.lat.toFixed(4)},${c.lon.toFixed(4)}`; spot.set(k, (spot.get(k) || []).concat([c])); });
+      spot.forEach((list) => {
+        if (list.length < 2) return;
+        const [x, y] = P(list[0].lat, list[0].lon);
+        const t = String(list.length);
+        ctx.font = `bold ${10 * S}px Calibri, Arial, sans-serif`;
+        const w = Math.max(15 * S, ctx.measureText(t).width + 8 * S), h = 15 * S, bx = x + r0 * 0.55, by = y - r0 * 0.55 - h;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(bx, by, w, h, h / 2); else ctx.rect(bx, by, w, h);
+        ctx.fillStyle = '#16201d'; ctx.fill(); ctx.lineWidth = 1.5 * S; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+        ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(t, bx + w / 2, by + h / 2 + 0.5 * S);
+      });
+    }
+
     const halo = (text, x, y, font, color, align) => {
       ctx.font = font; ctx.textAlign = align || 'center'; ctx.textBaseline = 'middle';
       ctx.lineWidth = 4 * S; ctx.strokeStyle = 'rgba(255,255,255,0.92)'; ctx.lineJoin = 'round';
@@ -347,7 +364,8 @@
     const byDis = app.countBy(st.filtered, 'disease');
     const active = st.clusters.filter((c) => c.status === 'Active');
     const inCl = st.filtered.filter((c) => st.membership.has(c.uid)).length;
-    const clusterMethod = `ST-DBSCAN · ${st.cl.eps} m · ${st.cl.days} days · at least ${st.cl.minPts} cases · ${st.cl.pooled ? 'Dengue and IP Fever together' : 'each disease separately'}`;
+    const win = window.Analysis.windowText(st.cl.days), activeDays = window.Analysis.activeWindow(st.cl.days);
+    const clusterMethod = `ST-DBSCAN · ${st.cl.eps} m · ${win} · at least ${st.cl.minPts} cases · ${st.cl.pooled ? 'Dengue and IP Fever together' : 'each disease separately'}`;
     const filterText = app.filterSummaryRows()
       .filter((r) => ['Disease', 'Lab result / condition', 'Block', 'PHC', 'Area type', 'Sex', 'Age group'].includes(r.Setting) && r.Value !== 'All')
       .map((r) => `${r.Setting}: ${r.Value}`).join(' · ') || 'All cases (no filters)';
@@ -510,7 +528,7 @@
       s.addImage({ data: img.data, x: MAP_BOX.x, y: MAP_BOX.y, w: MAP_BOX.w, h: MAP_BOX.h });
       const L = panel(s);
       L.head('Legend');
-      L.ring('#d9480f', `Active (case in last ${st.cl.days} days)`, active.length);
+      L.ring('#d9480f', `Active (case in last ${activeDays} days)`, active.length);
       L.ring('#6c757d', 'Over', st.clusters.length - active.length);
       L.dot('#7048e8', 'Case in a hotspot', inCl);
       L.dot('#9aa3a9', 'Case not in a hotspot', mapped.length - inCl);
@@ -521,7 +539,7 @@
         .forEach((c) => L.kv(`${c.id}  ${c.places[0] ? c.places[0][0] : ''}`, c.members.length, C.active));
       if (!active.length) L.kv('None', '');
       L.gap(0.02);
-      L.note(`${st.focus ? `Clusters are found on the whole HUD; those touching ${area} are shown in full. ` : ''}Each cluster's cases share one colour. Labels show cluster ID · number of cases. Method: ${clusterMethod}. Two cases are neighbours when they are within ${st.cl.eps} m and ${st.cl.days} days of each other.`);
+      L.note(`${st.focus ? `Clusters are found on the whole HUD; those touching ${area} are shown in full. ` : ''}Each cluster's cases share one colour. Labels show cluster ID · number of cases. Method: ${clusterMethod}. Two cases are neighbours when they are within ${st.cl.eps} m of each other${st.cl.days > 60 ? ', at any time' : ` and within ${st.cl.days} days`}.`);
     }
 
     /* ---------- 4. Cluster list ---------- */
@@ -682,7 +700,7 @@
         if (bb) {
           const img = await renderMap({
             bounds: bb.pad(0.06), width: 1300, height: Math.round((1300 * MAP.h) / MAP.w), mode: 'disease',
-            clusters: true, clusterLabels: true, heat: false, pointScale: 1.3,
+            clusters: true, clusterLabels: true, heat: false, pointScale: 1.3, stackCounts: true,
             subject: feat ? feat.geometry : null, cases, contextCases: ctx, clusterList: cls
           });
           s.addImage({ data: img.data, x: MAP.x, y: MAP.y, w: MAP.w, h: MAP.h });
@@ -766,8 +784,8 @@
         bullet(`IP Fever dated by ${app.BASIS_LABEL[f.basis].toLowerCase()}; Dengue by date of diagnosis. Weeks are ISO weeks (Mon–Sun).`),
         para('Cluster analysis', true),
         bullet('Space-time DBSCAN: two cases are neighbours when they lie within the distance AND within the number of days of each other. A cluster forms where a case has at least the minimum number of neighbours (itself included); isolated cases stay unclustered.'),
-        bullet(`Settings: ${st.cl.eps} m, ${st.cl.days} days, at least ${st.cl.minPts} cases, ${st.cl.pooled ? 'both diseases together' : 'each disease separately'}.`),
-        bullet(`Active = a case within the last ${st.cl.days} days up to ${app.fmtDay(ref)}; otherwise Closed. "New" = first case in the last 7 days.`),
+        bullet(`Settings: ${st.cl.eps} m, ${win}, at least ${st.cl.minPts} cases, ${st.cl.pooled ? 'both diseases together' : 'each disease separately'}.`),
+        bullet(`Active = a case within the last ${activeDays} days up to ${app.fmtDay(ref)}; otherwise Closed. "New" = first case in the last 7 days.`),
         bullet('Boundaries: LGD block and village layers, health blocks as listed on salem.nic.in (Attur HUD).')
       ], { x: 0.45, y: 1.3, w: 7.3, h: 5.6, fontFace: FONT, margin: 0, valign: 'top' });
 
