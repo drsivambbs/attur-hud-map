@@ -301,8 +301,32 @@
     return { weeks, series };
   }
 
+  // Official logos for the slides, read from the app's own assets (skipped if unavailable).
+  const LOGO_FILES = [['assets/logos/tn-govt-emblem.png', 145 / 160], ['assets/logos/dph-tn.png', 1], ['assets/logos/nhm-tn.png', 215 / 160]];
+  async function loadLogos() {
+    const out = [];
+    for (const [src, ratio] of LOGO_FILES) {
+      try {
+        const res = await fetch(src);
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        const data = await new Promise((ok) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.readAsDataURL(blob); });
+        out.push({ data, ratio });
+      } catch (e) { /* opened from disk: no logos */ }
+    }
+    return out;
+  }
+  const CREDIT = 'Designed by Dr. M. Sivachandran Mathiyazagan, MBBS, MPH (ICMR-NIE)';
+
   async function build(o) {
     const app = A(), st = app.state;
+    const logos = await loadLogos();
+    // Places the logos in a row ending at x = right; returns the row's left edge.
+    const placeLogos = (s, right, y, h, gap) => {
+      let x = right;
+      logos.slice().reverse().forEach((l) => { const w = h * l.ratio; x -= w; s.addImage({ data: l.data, x, y, w, h }); x -= gap; });
+      return x + gap;
+    };
     const pptx = new window.PptxGenJS();
     pptx.layout = 'LAYOUT_WIDE';
     pptx.author = 'Attur HUD';
@@ -330,7 +354,7 @@
     let page = 0;
     const footer = (s) => {
       s.addShape(pptx.ShapeType.line, { x: 0.45, y: 7.02, w: SLIDE_W - 0.9, h: 0, line: { color: C.line, width: 0.75 } });
-      s.addText(`${o.title}  ·  Source: ${sources}  ·  Prepared ${prepared}`, { x: 0.45, y: 7.08, w: 11.4, h: 0.26, fontFace: FONT, fontSize: 9, color: C.ink3, margin: 0, fit: 'shrink' });
+      s.addText(`EpiTrack Attur  ·  ${o.title}  ·  Source: ${sources}  ·  Prepared ${prepared}`, { x: 0.45, y: 7.08, w: 11.4, h: 0.26, fontFace: FONT, fontSize: 9, color: C.ink3, margin: 0, fit: 'shrink' });
       s.addText(String(page), { x: 12.28, y: 7.08, w: 0.6, h: 0.26, fontFace: FONT, fontSize: 9, color: C.ink3, align: 'right', margin: 0 });
     };
     const newSlide = (title, subtitle) => {
@@ -338,7 +362,9 @@
       page++;
       s.background = { color: 'FFFFFF' };
       s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: SLIDE_W, h: 0.1, fill: { color: C.accent }, line: { color: C.accent, width: 0 } });
-      s.addText(title, { x: 0.45, y: 0.26, w: SLIDE_W - 0.9, h: 0.52, fontFace: FONT, fontSize: 24, bold: true, color: C.ink, margin: 0, valign: 'middle' });
+      const logoLeft = logos.length ? placeLogos(s, SLIDE_W - 0.45, 0.28, 0.5, 0.12) : SLIDE_W - 0.45;
+      const tw = logoLeft - 0.45 - 0.25;
+      s.addText(title, { x: 0.45, y: 0.26, w: tw, h: 0.52, fontFace: FONT, fontSize: 24, bold: true, color: C.ink, margin: 0, valign: 'middle', fit: 'shrink' });
       if (subtitle) s.addText(subtitle, { x: 0.45, y: 0.78, w: SLIDE_W - 0.9, h: 0.32, fontFace: FONT, fontSize: 12.5, color: C.ink2, margin: 0, valign: 'middle' });
       footer(s);
       return s;
@@ -407,7 +433,9 @@
       page++;
       s.background = { color: 'FFFFFF' };
       s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 0.28, h: 7.5, fill: { color: C.accent }, line: { color: C.accent, width: 0 } });
-      s.addText(st.focus ? `ATTUR HEALTH UNIT DISTRICT · ${area.toUpperCase()}` : 'ATTUR HEALTH UNIT DISTRICT · SALEM', { x: 0.85, y: 0.9, w: 11.5, h: 0.35, fontFace: FONT, fontSize: 13, bold: true, color: C.accent, charSpacing: 2, margin: 0 });
+      if (logos.length) placeLogos(s, 12.9, 0.5, 0.85, 0.2);
+      s.addText('EPITRACK ATTUR', { x: 0.85, y: 0.62, w: 7.5, h: 0.32, fontFace: FONT, fontSize: 13, bold: true, color: C.accent, charSpacing: 3, margin: 0 });
+      s.addText(st.focus ? `Attur Health Unit District, Salem · ${area}` : 'Attur Health Unit District, Salem', { x: 0.85, y: 0.94, w: 7.5, h: 0.3, fontFace: FONT, fontSize: 12.5, color: C.ink2, margin: 0 });
       s.addText(o.title, { x: 0.85, y: 1.3, w: 11.8, h: 1.2, fontFace: FONT, fontSize: 38, bold: true, color: C.ink, margin: 0, valign: 'bottom', fit: 'shrink' });
       s.addText(o.subtitle, { x: 0.85, y: 2.6, w: 11.8, h: 0.45, fontFace: FONT, fontSize: 18, color: C.ink2, margin: 0, valign: 'top' });
       const tiles = [
@@ -430,7 +458,9 @@
         { text: 'Clusters: ', options: { bold: true, color: C.ink2 } }, { text: clusterMethod, options: { color: C.ink2, breakLine: true } },
         { text: `IP Fever dated by ${app.BASIS_LABEL[f.basis].toLowerCase()}. Last 7 days = ${app.fmtShort(ref - 6)} – ${app.fmtShort(ref)}.`, options: { color: C.ink3 } }
       ], { x: 0.85, y: 5.35, w: 11.8, h: 1.0, fontFace: FONT, fontSize: 12, margin: 0, valign: 'top', paraSpaceAfter: 3 });
-      s.addText(`Source: ${sources}  ·  Prepared ${prepared}`, { x: 0.85, y: 6.85, w: 11.8, h: 0.3, fontFace: FONT, fontSize: 10, color: C.ink3, margin: 0 });
+      s.addText(`Source: ${sources}  ·  Prepared ${prepared}`, { x: 0.85, y: 6.62, w: 11.8, h: 0.28, fontFace: FONT, fontSize: 10, color: C.ink3, margin: 0 });
+      s.addShape(pptx.ShapeType.line, { x: 0.85, y: 6.98, w: 12.05, h: 0, line: { color: C.line, width: 0.75 } });
+      s.addText(CREDIT, { x: 0.85, y: 7.04, w: 12.05, h: 0.28, fontFace: FONT, fontSize: 10.5, color: C.ink2, margin: 0 });
     }
 
     /* ---------- 2. Case map ---------- */
@@ -644,7 +674,7 @@
     if (!window.PptxGenJS) { app.toast('The PowerPoint library did not load. Check the internet connection and reload the page.', true); return; }
     const f = app.state.f;
     const area = app.areaLabel();
-    $('pptTitle').value = app.state.focus ? `Fever & Dengue Surveillance – ${area}` : 'Fever & Dengue Surveillance – Attur HUD';
+    $('pptTitle').value = app.state.focus ? `Fever & Dengue Surveillance – ${area}` : 'Fever & Dengue Surveillance – Attur HUD';  // EpiTrack Attur appears on every slide
     $('pptSubtitle').value = `${app.state.focus ? `${area}, Attur HUD · ` : ''}${app.fmtDay(f.from)} – ${app.fmtDay(f.to)} · data up to ${app.fmtDay(app.state.asOf)}`;
     $('pptExtentArea').textContent = app.state.focus ? area : 'Whole HUD';
     const saved = store.get('pptSlides', null);

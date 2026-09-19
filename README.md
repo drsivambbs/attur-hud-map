@@ -1,4 +1,8 @@
-# Attur HUD – Fever & Dengue Surveillance Map
+# EpiTrack Attur – Fever & Dengue Surveillance Map
+
+Directorate of Public Health and Preventive Medicine · Government of Tamil Nadu · National Health Mission, Tamil Nadu — Attur Health Unit District, Salem.
+
+Designed by **Dr. M. Sivachandran Mathiyazagan**, MBBS, MPH (ICMR-NIE).
 
 A static web app that maps the IP Fever and Dengue line list for Attur Health Unit District (Salem), with filters, space-time cluster analysis, a weekly summary and data-quality checks. Excel files are read **inside the browser**: no server, no upload, no patient data stored in this folder.
 
@@ -79,6 +83,7 @@ Missing / unreadable coordinates, points outside the HUD boundary, low-precision
 | `js/analysis.js` | Location checks, data-quality checks, ST-DBSCAN, nearest-neighbour index |
 | `js/app.js` | Filters, map, clusters, summary, upload, export |
 | `js/report.js` | PowerPoint report: map rendering and slide layout (PptxGenJS) |
+| `assets/logos/` | Government of Tamil Nadu emblem, DPH and NHM Tamil Nadu logos |
 | `template/` | Standard import template (no patient data) |
 | `tools/make_template.py` | Rebuilds the template (openpyxl) |
 | `data/hud-data.js` | Attur HUD, health-block and village boundaries (from `../Attur_HUD_GeoJSON`) |

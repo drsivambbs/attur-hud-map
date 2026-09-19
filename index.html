@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Attur Fever–Dengue Map</title>
+  <title>EpiTrack Attur</title>
+  <link rel="icon" type="image/png" href="assets/logos/tn-govt-emblem.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -16,12 +17,14 @@
     <!-- ================= Top bar ================= -->
     <header class="topbar">
       <div class="brand">
-        <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2.5c-3.9 0-7 3-7 6.9 0 5.1 7 12.1 7 12.1s7-7 7-12.1c0-3.9-3.1-6.9-7-6.9z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="9.5" r="2.6" fill="currentColor"/></svg>
-        </span>
-        <div>
-          <p class="eyebrow">Attur HUD · Salem</p>
-          <h1>Fever &amp; Dengue Map</h1>
+        <div class="logos">
+          <img src="assets/logos/tn-govt-emblem.png" alt="Government of Tamil Nadu" title="Government of Tamil Nadu" width="36" height="40">
+          <img src="assets/logos/dph-tn.png" alt="Directorate of Public Health and Preventive Medicine, Tamil Nadu" title="Directorate of Public Health and Preventive Medicine, Tamil Nadu" width="40" height="40">
+          <img src="assets/logos/nhm-tn.png" alt="National Health Mission, Tamil Nadu" title="National Health Mission, Tamil Nadu" width="54" height="40">
+        </div>
+        <div class="brand-text">
+          <h1>EpiTrack <span>Attur</span></h1>
+          <p class="eyebrow">Fever &amp; Dengue surveillance · Attur HUD, Salem</p>
         </div>
       </div>
 
@@ -262,6 +265,7 @@
           <ul class="qa-list" id="qaList"></ul>
         </div>
       </section>
+      <footer class="credit">Designed by <b>Dr. M. Sivachandran Mathiyazagan</b>, <span class="nw">MBBS, MPH (ICMR-NIE)</span></footer>
     </aside>
 
     <!-- ================= Map ================= -->
@@ -320,7 +324,7 @@
 
       <div class="empty" id="emptyState">
         <div class="empty-card">
-          <h2>Welcome</h2>
+          <h2>Welcome to EpiTrack Attur</h2>
           <p class="lead">See where Dengue and IP Fever cases are, and where they are grouping into hotspots.</p>
           <ol class="steps">
             <li><span>1</span><div><b>Fill the line list</b> in the standard Excel template.<br><button type="button" class="link" id="btnTemplate2">Download the blank template</button></div></li>
@@ -332,6 +336,7 @@
             Choose the Excel file
           </button>
           <p class="hint">The file stays on this computer. Nothing is uploaded.</p>
+          <p class="credit-inline">Designed by <b>Dr. M. Sivachandran Mathiyazagan</b>, <span class="nw">MBBS, MPH (ICMR-NIE)</span></p>
         </div>
       </div>
       <div class="drop" id="dropZone" hidden><div>Drop the Excel file here</div></div>
@@ -360,6 +365,7 @@
         <dt>Data check</dt><dd>Rows with missing or doubtful details, such as no location or a date that does not add up.</dd>
         <dt>Hide names</dt><dd>Removes names, phone numbers and addresses from the screen and from downloads, for meetings.</dd>
       </dl>
+      <p class="credit-inline">EpiTrack Attur · Designed by <b>Dr. M. Sivachandran Mathiyazagan</b>, <span class="nw">MBBS, MPH (ICMR-NIE)</span></p>
       <div class="dlg-actions">
         <button type="button" class="btn" id="btnTemplate">Download blank template</button>
         <button type="button" class="btn btn-primary" id="helpOk">Got it</button>
